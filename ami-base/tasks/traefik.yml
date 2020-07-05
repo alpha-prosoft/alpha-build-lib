@@ -1,0 +1,67 @@
+- name: 'Install AWS cli'
+  shell: |
+     set -e
+     curl -L "https://github.com/containous/traefik/releases/download/v2.2.7/traefik_v2.2.7_linux_amd64.tar.gz" -o "/tmp/trafik.tar.gz"
+     tar -xvf /tmp/trafik.tar.gz -C /opt/
+
+- name: 'Add traefik user'
+  user:
+    name: traefik
+    uid: 2040
+ 
+- name: 'Create traefik dir'
+  file:
+    path: /etc/traefik
+    state: directory
+    mode: '0755'
+    owner: traefik
+    group: traefik
+
+- name: 'Create traefik config dir'
+  file:
+    path: /etc/traefik/config
+    state: directory
+    mode: '0755'
+    owner: traefik
+    group: traefik
+
+
+- name: 'Create traefik log dir'
+  file:
+    path: /var/log/traefik/
+    state: directory
+    mode: '0755'
+    owner: traefik
+    group: traefik
+
+- name: 'Copy traefik'
+  copy:
+    src: traefik.service
+    dest: /etc/systemd/system
+    owner: root
+    group: root
+
+
+- name: 'Copy traefik config'
+  copy:
+    src: traefik.toml
+    dest: /etc/traefik/traefik.toml
+    owner: root
+    group: root
+
+- name: 'Copy traefik file config'
+  copy:
+    src: config.toml
+    dest: /etc/traefik/config/config.toml
+    owner: root
+    group: root
+
+
+- name: 'Enable traefik service'
+  systemd:
+    name: traefik 
+    enabled: no
+    state: stopped
+
+
+- 

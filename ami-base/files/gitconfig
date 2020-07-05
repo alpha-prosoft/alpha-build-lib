@@ -1,0 +1,10 @@
+[user]
+    email = ${ServiceAlias}@${PrivateHostedZoneName}
+    name = ${ServiceAlias} 
+
+[http]
+    cookieFile = ~/.gitcookie
+
+[core]
+    editor = vim
+

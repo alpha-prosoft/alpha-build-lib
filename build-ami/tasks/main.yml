@@ -1,0 +1,179 @@
+- name: 'Create temporary build directory'
+  tempfile:
+    state: directory
+    suffix: build
+  register: build_dir 
+
+- name: 'Set build tag'
+  set_fact:
+    build_tag: 'build-{{ params["ProjectName"] }}.b{{ params["BuildId"] }}'
+    ami_dir: '{{ build_dir.path }}/ami'
+
+- name: 'Get current instance metadata'
+  ec2_metadata_facts:
+
+- name: 'Create .ami directory to keep temoprary data'
+  file:
+    path: '{{ ami_dir }}'
+    state: directory
+    mode: '0700'
+
+- name: 'Find AMIs'
+  ec2_ami_info:
+    region: '{{ ansible_ec2_placement_region }}'
+    owners: 679593333241
+    filters:
+      name: '{{ ami_search | default("ubuntu/images/hvm-ssd/ubuntu-focal-20.04-amd64-server*") }}'
+  register: findamis
+
+- name: 'Pick latest AMI'
+  set_fact:
+    ami_find: "{{ findamis.images | sort(attribute='creation_date', reverse = True) }}"
+
+- name: 'Find AMI-build security group'
+  ec2_group_info:
+    region: '{{ ansible_ec2_placement_region }}'
+    filters:
+      group-name: 'AMI-Build-SG'
+  register: amibuild_sg
+  ignore_errors: True
+
+- name: 'Create security group for access to this instance'
+  ec2_group:
+    name: 'AMI-Build-SG'
+    description: 'Allow access from build server'
+    vpc_id: "{{ hostvars['localhost']['ansible_ec2_network_interfaces_macs_' + hostvars['localhost']['ansible_ec2_mac'].replace(':', '_') + '_vpc_id'] }}"
+    region: '{{ ansible_ec2_placement_region }}'
+    rules:
+      - proto: tcp
+        ports:
+          - 22
+        group_id: "{{ hostvars['localhost']['ansible_ec2_network_interfaces_macs_' + hostvars['localhost']['ansible_ec2_mac'].replace(':', '_') + '_security_group_ids'].split(',')[0] }}"
+        rule_desc: 'Allow SSH for building'
+  register: ami_sg
+  when: amibuild_sg is not defined or amibuild_sg | length == 0
+
+- name: 'Set AMI Build security group ID from amibuild_sg'
+  set_fact:
+    sg_group_id: "{{ amibuild_sg.security_groups[0].group_id }}"
+  when: amibuild_sg.security_groups|selectattr("group_id", "defined")|list|length >0
+
+- name: 'Set AMI Build security group ID from ami_sg'
+  set_fact:
+    sg_group_id: "{{ ami_sg.group_id }}"
+  when: ami_sg|selectattr("group_id", "defined")|list|length >0
+
+- debug:
+    var: sg_group_id
+
+- name: 'AMI Creation'
+  block:
+   - name: 'Delete key pair if exits'
+     shell: |
+       aws ec2 delete-key-pair --key-name "{{ build_tag }}" || echo "No key yet"
+
+   - name: 'Create temporary key pair'
+     ec2_key:
+       name: '{{ build_tag }}'
+       region: '{{ ansible_ec2_placement_region }}'
+     register: ec2_key_result
+
+   - debug:
+       var: ec2_key_result.msg
+ 
+   - name: 'Save private key'
+     copy:
+       content: '{{ ec2_key_result.key.private_key }}'
+       dest: '{{ ami_dir }}/{{ build_tag }}.pem'
+       mode: '0600'
+ 
+   - name: 'Launch temporary instance'
+     ec2:
+       assign_public_ip: True
+       region: '{{ ansible_ec2_placement_region }}'
+       key_name: '{{ build_tag }}'
+       group_id: '{{ sg_group_id }}'
+       instance_type: m5.xlarge
+       vpc_subnet_id: "{{ hostvars['localhost']['ansible_ec2_network_interfaces_macs_' + hostvars['localhost']['ansible_ec2_mac'].replace(':', '_') + '_subnet_id'] }}"
+       image: '{{ ami_find[0].image_id }}'
+       wait: yes
+       wait_timeout: 500
+       exact_count: 1
+       count_tag:
+         role: '{{ build_tag }}'
+       instance_tags:
+         role: '{{ build_tag }}'
+         Name: 'AMI-{{ params["ProjectName"] }}-{{ params["BuildId"] }}'
+     register: ami_instance
+
+   - name: 'Print instance data'
+     debug:
+       var: ami_instance
+
+   - name: 'Add host to group'
+     add_host:
+       name: '{{ ami_instance.tagged_instances.0.private_ip }}'
+       groups: 'just_created'
+       ansible_ssh_private_key_file: '{{ ami_dir }}/{{ build_tag }}.pem'
+       ansible_user: 'ubuntu'
+
+   - name: 'Wait for SSH to be ready {{ ami_instance.tagged_instances.0.private_ip }}'
+     wait_for:
+       host: '{{ ami_instance.tagged_instances.0.private_ip }}'
+       port: 22
+       search_regex: 'OpenSSH'
+       timeout: 300
+
+   - name: 'Trust new host'
+     shell: 'ssh-keyscan -p 22  {{ ami_instance.tagged_instances.0.private_ip }} > /home/build/.ssh/known_hosts'
+
+   - name: 'Execute installation roles'
+     include_role:
+       name: '{{ install_role }}'
+       apply:
+         become: true
+         delegate_to: '{{ groups.just_created[0] }}'
+     with_items: '{{ installation_roles }}'
+     loop_control:
+       loop_var: install_role
+     when: installation_roles is defined
+
+   - name: 'Create AMI'
+     ec2_ami:
+       instance_id: '{{ ami_instance.tagged_instances.0.id }}'
+       region: '{{ ansible_ec2_placement_region }}'
+       state: present
+       description: 'This was provisioned for {{ build_tag }}'
+       name: '{{ build_tag }}'
+       wait: yes
+     register: amioutput
+
+   - name: 'Add AMI Id to artifacts'
+     include_role:
+       name: alpha-build-lib/add-artifact
+     vars:
+       artifact_key: 'AmiId'
+       artifact_value: '{{ amioutput.image_id }}'
+
+
+   - name: 'Print AMI data'
+     debug:
+       var: amioutput
+
+  always:
+    - name: 'Terminate temporary instance'
+      ec2:
+        state: absent
+        region: '{{ ansible_ec2_placement_region }}'
+        instance_ids: '{{ ami_instance.tagged_instances.0.id }}'
+
+    - name: 'Remove temporary key pair'
+      ec2_key:
+        name: '{{ build_tag }}'
+        region: '{{ ansible_ec2_placement_region }}'
+        state: absent
+
+    - name: 'Delete private key file'
+      file:
+        path: '~/.ami/{{ build_tag }}.pem'
+        state: absent

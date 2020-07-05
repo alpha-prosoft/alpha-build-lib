@@ -1,0 +1,96 @@
+- name: 'Print release'
+  shell: 'cat /etc/*release'
+
+- name: 'Print release'
+  shell: 'uname -r'
+
+- name: 'Crete docker group'
+  group:
+    name: docker
+    gid: 2020
+
+- name: 'Create group'
+  group:
+    name: "{{ user_name }}"
+    gid: 2024
+    system: yes
+    state: present
+
+- name: 'Crete user'
+  user:
+    name: '{{ user_name }}' 
+    uid: 2025
+    group: '{{ user_name }}'
+    groups: 
+    - docker
+    system: yes
+    state: present
+
+- name: 'Enable universe repository'
+  shell: 'add-apt-repository universe'
+
+- name: 'Install dependecies'
+  apt:
+    name: 
+      - unzip
+      - zip
+      - jq
+      - python-setuptools
+      - python3-pip
+      - tree
+      - docker.io
+      - acl
+      - net-tools
+    state: present
+    update_cache: true
+  register: deps_result
+  until: deps_result is success
+  retries: 3
+  delay: 3
+
+- name: 'Configure docker daemon'
+  shell: |
+    echo '{ "features": { "buildkit": true } }' > /etc/docker/daemon.json
+
+- pip:
+    name: 
+    - pyjwt
+    - requests
+
+- include_tasks: cloudwatch_agent.yml
+
+- name: 'Install AWS cli'
+  shell: |
+     set -e 
+     curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" 
+     unzip awscliv2.zip 
+     ./aws/install
+
+- name: 'Copy docker auth_service'
+  copy:
+    src: 'auth_server.py'
+    dest: '/opt/auth_server.py'
+    mode: '744'
+
+- name: 'Copy docker auth_server'
+  copy:
+    src: 'auth_server.py'
+    dest: '/opt/auth_server.py'
+    mode: '744'
+
+- name: 'Copy auth_service'
+  copy:
+    src: auth_server.service
+    dest: /etc/systemd/system
+    owner: root
+    group: root
+
+- name: 'Enable auth service'
+  systemd:
+    name: auth_server
+    enabled: no
+    state: stopped
+
+
+- include_tasks: traefik.yml
+- include_tasks: login.yml

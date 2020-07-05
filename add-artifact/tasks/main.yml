@@ -1,0 +1,9 @@
+- set_fact:
+    artifacts: '{{ artifacts | default({}) | combine({artifact_key : artifact_value}) }}'
+  when: artifacts is not defined
+
+- name: 'Store artifacts to file'  
+  copy:
+    content: "{{ artifacts }}"
+    dest: "/dist/artifacts.json"
+

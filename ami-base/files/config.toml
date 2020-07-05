@@ -1,0 +1,18 @@
+[http.middlewares]
+    [http.middlewares.local-auth.forwardAuth]
+       address = "http://127.0.0.1:8081"
+       authResponseHeaders = ["A-User", "A-Email", "A-Name", "A-Role", "A-Roles"]
+
+
+[http]
+    [http.routers]
+       [http.routers.local]
+          rule = "PathPrefix(`/`)"
+          service = "local"
+          middlewares = ["local-auth"]
+
+    [http.services]
+          [http.services.local.loadbalancer]
+            [[http.services.local.loadbalancer.servers]]
+              url = "http://localhost:8082"
+

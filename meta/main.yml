@@ -1,0 +1,11 @@
+galaxy_info:
+  role_name: alpha-build-lib 
+  author: contact@alpha-prosoft.com
+  description: Collection of roles required for buildint things
+  company: Alpha-Prosoft
+  license: MIT
+  min_ansible_version: 2.7
+  galaxy_tags: []
+
+dependencies: []
+

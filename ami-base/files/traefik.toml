@@ -1,0 +1,28 @@
+defaultEntryPoints = ["http"]
+
+[entryPoints]
+  [entryPoints.local-private]
+    address = "127.0.0.1:18999"
+  [entryPoints.http]
+    address = "0.0.0.0:8080"
+  [entryPoints.http.forwardedHeaders]
+    insecure = true
+
+
+
+[providers]
+  [providers.file]
+    directory = "/etc/traefik/config"
+    watch = true
+
+[log]
+  filePath = "/var/log/traefik/traefik.log"
+
+[accessLog]
+
+[ping]
+  entryPoint = "http"
+
+
+
+

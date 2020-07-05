@@ -1,0 +1,51 @@
+- name: 'Add amazon-cloudwatch-agent key'
+  apt_key:
+    id: 'D58167303B789C72'
+    url: 'https://s3.amazonaws.com/amazoncloudwatch-agent/assets/amazon-cloudwatch-agent.gpg'
+    state: present
+
+- name: 'Download deb file signature'
+  get_url:
+    url: "https://s3.amazonaws.com/amazoncloudwatch-agent/debian/amd64/latest/amazon-cloudwatch-agent.deb.sig"
+    dest: "/tmp/amazon-cloudwatch-agent.deb.sig"
+    timeout: "180"
+
+- name: 'Download deb file'
+  get_url:
+    url: "https://s3.amazonaws.com/amazoncloudwatch-agent/debian/amd64/latest/amazon-cloudwatch-agent.deb"
+    dest: "/tmp/amazon-cloudwatch-agent.deb"
+    timeout: "180"
+
+- name: 'Install cloudwatch agent'
+  apt:
+    deb: "/tmp/amazon-cloudwatch-agent.deb"
+    state: present
+
+- name: 'Copy docker amazon-cloudwatch-agent.json'
+  copy:
+    src: 'amazon-cloudwatch-agent.json'
+    dest: '/etc/amazon-cloudwatch-agent.json'
+    mode: '744'
+
+- name: 'Copy reload-cloudwatch-agent'
+  copy:
+    src: 'reload-cloudwatch-agent.sh'
+    dest: '/opt/reload-cloudwatch-agent.sh'
+    mode: '755'
+
+- name: 'Copy reload-cloudwatch-agent dir list'
+  copy:
+    src: 'dir_list.txt'
+    dest: '/opt/dir_list.txt'
+    mode: '755'
+
+- name: 'Copy reload-cloudwatch-agent'
+  copy:
+    src: 'file_list.txt'
+    dest: '/opt/file_list.txt'
+    mode: '755'
+
+- name: 'Update cloudwatch agent'
+  cron:
+    name: 'Reload cloudwatch agent'
+    job: '/opt/reload-cloudwatch-agent.sh | tee -a /var/log/reload-cloudwatch-agent.log'

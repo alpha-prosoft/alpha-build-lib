@@ -1,0 +1,20 @@
+[Unit]
+Description=SSH key agent
+After=syslog.target network.target jenkins.service
+
+
+[Service]
+Restart=on-abnormal
+RestartSec=5
+User=traefik
+Group=traefik
+Type=simple
+ExecStartPre=/bin/mkdir -p /run/jenkins/
+ExecStartPre=/bin/chown -R jenkins:jenkins /run/jenkins/
+Environment=SSH_AUTH_SOCK=/run/jenkins/ssh-agent.socket
+ExecStart=/usr/bin/su jenkins -c '/usr/bin/ssh-agent -D -a $SSH_AUTH_SOCK'
+ExecStartPost=/usr/bin/sleep  3
+ExecStartPost=/usr/bin/su jenkins -c '/usr/bin/ssh-add /var/lib/jenkins/.ssh/bb_rsa'
+
+[Install]
+WantedBy=default.target

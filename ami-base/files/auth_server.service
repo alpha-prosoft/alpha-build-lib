@@ -1,0 +1,16 @@
+[Unit]
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+Group=ubuntu
+ExecStart=/usr/bin/bash -c "env && /usr/bin/python3 /opt/auth_server.py"
+EnvironmentFile=/etc/environment
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+
