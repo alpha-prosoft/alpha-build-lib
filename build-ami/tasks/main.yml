@@ -21,7 +21,7 @@
 - name: 'Find AMIs'
   ec2_ami_info:
     region: '{{ ansible_ec2_placement_region }}'
-    owners: 679593333241
+    owners: 099720109477
     filters:
       name: '{{ ami_search | default("ubuntu/images/hvm-ssd/ubuntu-focal-20.04-amd64-server*") }}'
   register: findamis
@@ -146,6 +146,12 @@
        description: 'This was provisioned for {{ build_tag }}'
        name: '{{ build_tag }}'
        wait: yes
+       root_device_name: /dev/sda
+       device_mapping:
+       - device_name: /dev/sda1
+         size: 100
+         delete_on_termination: true
+         volume_type: gp2
      register: amioutput
 
    - name: 'Add AMI Id to artifacts'
