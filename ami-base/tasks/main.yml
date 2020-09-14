@@ -57,7 +57,7 @@
     - pyjwt
     - requests
 
-- include_tasks: cloudwatch_agent.yml
+#- include_tasks: cloudwatch_agent.yml
 
 - name: 'Install AWS cli'
   shell: |
