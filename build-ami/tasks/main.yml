@@ -1,3 +1,11 @@
+- name: "Cleanup"
+  shell: |
+     aws ec2 terminate-instances \
+          --instance-ids $(aws ec2 describe-instances \
+                            --query 'Reservations[].Instances[].InstanceId' \
+                            --filters "Name=tag:ProjectName,Values=AMI-{{ params["ProjectName"] }}" \
+                            --output text) || echo "No instance"
+
 - name: 'Create temporary build directory'
   tempfile:
     state: directory
@@ -104,6 +112,7 @@
        instance_tags:
          role: '{{ build_tag }}'
          Name: 'AMI-{{ params["ProjectName"] }}-{{ params["BuildId"] }}'
+         ProjectName: 'AMI-{{ params["ProjectName"] }}'
      register: ami_instance
 
    - name: 'Print instance data'
