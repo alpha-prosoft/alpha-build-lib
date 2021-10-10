@@ -19,6 +19,10 @@
 
 - name: 'Get current instance metadata'
   ec2_metadata_facts:
+  retries: 5
+  delay: 10
+  register: result
+  until: result.rc == 0
 
 - name: 'Create .ami directory to keep temoprary data'
   file:
