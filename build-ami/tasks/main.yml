@@ -127,6 +127,7 @@
      add_host:
        name: '{{ ami_instance.tagged_instances.0.private_ip }}'
        groups: 'just_created'
+       ansible_connection: 'ssh'
        ansible_ssh_private_key_file: '{{ ami_dir }}/{{ build_tag }}.pem'
        ansible_user: 'ubuntu'
 
