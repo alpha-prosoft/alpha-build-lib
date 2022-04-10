@@ -57,6 +57,9 @@
     
     chmod +x $DOCKER_DIR/cli-plugins/docker-compose
     docker compose version
+     
+    
+    echo "vm.max_map_count=262144" >> /etc/sysctl.conf
 
 
 - pip:
