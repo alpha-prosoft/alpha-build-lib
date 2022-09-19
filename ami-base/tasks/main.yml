@@ -7,19 +7,19 @@
 - name: 'Crete docker group'
   group:
     name: docker
-    gid: 2020
+    gid: 10999
 
 - name: 'Create group'
   group:
     name: "{{ user_name }}"
-    gid: 2024
+    gid: 1033
     system: yes
     state: present
 
 - name: 'Crete user'
   user:
     name: '{{ user_name }}' 
-    uid: 2025
+    uid: 1034
     group: '{{ user_name }}'
     groups: 
     - docker
