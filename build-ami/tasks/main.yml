@@ -168,9 +168,9 @@
        root_device_name: /dev/sda
        device_mapping:
        - device_name: /dev/sda1
-         size: 100
+         size: 500
          delete_on_termination: true
-         volume_type: gp2
+         volume_type: gp3
      register: amioutput
 
    - name: 'Add AMI Id to artifacts'
