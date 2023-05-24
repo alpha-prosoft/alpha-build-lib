@@ -32,15 +32,20 @@
 
 - name: 'Find AMIs'
   ec2_ami_info:
-    region: '{{ ansible_ec2_placement_region }}'
-    owners: 099720109477
+    region: 'eu-central-1'
+    owners:
+     - '{{ ami_owner | default("amazon") }}'
     filters:
-      name: '{{ ami_search | default("ubuntu/images/hvm-ssd/ubuntu-focal-20.04-amd64-server*") }}'
+      name: '{{ ami_search | default("amzn2-ami-hvm-*-x86_64-gp2") }}'
+      architecture: x86_64
   register: findamis
 
 - name: 'Pick latest AMI'
   set_fact:
-    ami_find: "{{ findamis.images | sort(attribute='creation_date', reverse = True) }}"
+    ami_id: '{{ findamis.images  
+                    | sort(attribute="creation_date", reverse = True) 
+                    | map(attribute="image_id")
+                    | first }}'
 
 - name: 'Find AMI-build security group'
   ec2_group_info:
@@ -107,7 +112,7 @@
        group_id: '{{ sg_group_id }}'
        instance_type: m5.xlarge
        vpc_subnet_id: "{{ hostvars['localhost']['ansible_ec2_network_interfaces_macs_' + hostvars['localhost']['ansible_ec2_mac'].replace(':', '_') + '_subnet_id'] }}"
-       image: '{{ ami_find[0].image_id }}'
+       image: '{{ ami_id }}'
        wait: yes
        wait_timeout: 500
        exact_count: 1
