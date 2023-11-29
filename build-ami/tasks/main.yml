@@ -40,13 +40,18 @@
       architecture: x86_64
   register: findamis
 
+- debug:
+    var: findamis
+
 - name: 'Pick latest AMI'
   set_fact:
     ami_id: '{{ findamis.images  
                     | sort(attribute="creation_date", reverse = True) 
                     | map(attribute="image_id")
                     | first }}'
-
+- debug:
+    var: ami_id
+    
 - name: 'Find AMI-build security group'
   ec2_group_info:
     region: '{{ ansible_ec2_placement_region }}'
