@@ -56,7 +56,7 @@
 - name: 'Install docker'
   shell: |
     set -e
-    amazon-linux-extras install docker
+    amazon-linux-extras install -y docker
   
 - name: 'Setup docker'
   shell: |
