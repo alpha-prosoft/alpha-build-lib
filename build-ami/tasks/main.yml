@@ -32,7 +32,7 @@
 
 - name: 'Find AMIs'
   ec2_ami_info:
-    region: 'eu-central-1'
+    region: '{{ params["Region"] }}'
     owners:
      - '{{ ami_owner | default("amazon") }}'
     filters:
