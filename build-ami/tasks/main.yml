@@ -115,8 +115,7 @@
          assign_public_ip: true
        region: '{{ ansible_ec2_placement_region }}'
        key_name: '{{ build_tag }}'
-       groups:
-         group_id: '{{ sg_group_id }}'
+       security_group: '{{ sg_group_id }}'
        instance_type: m5.xlarge
        vpc_subnet_id: "{{ hostvars['localhost']['ansible_ec2_network_interfaces_macs_' + hostvars['localhost']['ansible_ec2_mac'].replace(':', '_') + '_subnet_id'] }}"
        image_id: '{{ ami_id }}'
