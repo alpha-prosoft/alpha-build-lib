@@ -47,9 +47,7 @@
       - bash-completion
       - less
       - man
-      - pwgen
       - nfs-utils
-      - ansible
       - gettext
       - tree
       - amazon-linux-extras
