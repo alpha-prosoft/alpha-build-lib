@@ -133,21 +133,21 @@
 
    - name: 'Add host to group'
      add_host:
-       name: '{{ ami_instance.tagged_instances.0.private_ip }}'
+       name: '{{ ami_instance.instances.0.network_interfaces.0.private_ip_address }}'
        groups: 'just_created'
        ansible_connection: 'ssh'
        ansible_ssh_private_key_file: '{{ ami_dir }}/{{ build_tag }}.pem'
        ansible_user: 'ubuntu'
 
-   - name: 'Wait for SSH to be ready {{ ami_instance.tagged_instances.0.private_ip }}'
+   - name: 'Wait for SSH to be ready {{ ami_instance.instances.0.network_interfaces.0.private_ip_address }}'
      wait_for:
-       host: '{{ ami_instance.tagged_instances.0.private_ip }}'
+       host: '{{ ami_instance.instances.0.network_interfaces.0.private_ip_address }}'
        port: 22
        search_regex: 'OpenSSH'
        timeout: 300
 
    - name: 'Trust new host'
-     shell: 'ssh-keyscan -p 22  {{ ami_instance.tagged_instances.0.private_ip }} > /home/build/.ssh/known_hosts'
+     shell: 'ssh-keyscan -p 22  {{ ami_instance.instances.0.network_interfaces.0.private_ip_address }} > /home/build/.ssh/known_hosts'
 
    - name: 'Execute installation roles'
      include_role:
@@ -162,7 +162,7 @@
 
    - name: 'Create AMI'
      ec2_ami:
-       instance_id: '{{ ami_instance.tagged_instances.0.id }}'
+       instance_id: '{{ ami_instance.instances.0.instance_id }}'
        region: '{{ ansible_ec2_placement_region }}'
        state: present
        description: 'This was provisioned for {{ build_tag }}'
@@ -193,7 +193,7 @@
       ec2:
         state: absent
         region: '{{ ansible_ec2_placement_region }}'
-        instance_ids: '{{ ami_instance.tagged_instances.0.id }}'
+        instance_ids: '{{ ami_instance.instances.0.instance_id }}'
 
     - name: 'Remove temporary key pair'
       ec2_key:
