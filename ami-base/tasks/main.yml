@@ -25,31 +25,44 @@
     - docker
     system: yes
     state: present
-
-- name: 'Enable universe repository'
-  shell: 'add-apt-repository universe'
-
-- name: 'Install dependecies'
-  apt:
-    name: 
-      - unzip
-      - zip
-      - jq
-      - python-setuptools
+ 
+# basic packages
+- name: 'Install basic packages via yum'
+  yum:
+    use_backend: yum
+    name:
       - python3-pip
-      - tree
-      - docker.io
-      - acl
+      - zip
+      - unzip
+      - jq
+      - wget
       - net-tools
-    state: present
-    update_cache: true
-  register: deps_result
-  until: deps_result is success
-  retries: 3
-  delay: 3
+      - tcpdump
+      - telnet
+      - openssh-clients
+      - bind-utils
+      - vim
+      - curl
+      - gnupg2
+      - bash-completion
+      - less
+      - man
+      - pwgen
+      - nfs-utils
+      - ansible
+      - gettext
+      - tree
+      - amazon-linux-extras
+    state: latest
 
+- name: 'Install docker'
+  shell: |
+    set -e
+    amazon-linux-extras install docker
+  
 - name: 'Setup docker'
   shell: |
+    set -e
     echo '{ "features": { "buildkit": true } }' > /etc/docker/daemon.json
     DOCKER_DIR=/usr/lib/docker
     mkdir -p $DOCKER_DIR/cli-plugins
