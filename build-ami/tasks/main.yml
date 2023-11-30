@@ -110,20 +110,20 @@
        mode: '0600'
  
    - name: 'Launch temporary instance'
-     ec2:
-       assign_public_ip: True
+     amazon.aws.ec2_instance:
+       network:
+         assign_public_ip: true
        region: '{{ ansible_ec2_placement_region }}'
        key_name: '{{ build_tag }}'
-       group_id: '{{ sg_group_id }}'
+       groups:
+         group_id: '{{ sg_group_id }}'
        instance_type: m5.xlarge
        vpc_subnet_id: "{{ hostvars['localhost']['ansible_ec2_network_interfaces_macs_' + hostvars['localhost']['ansible_ec2_mac'].replace(':', '_') + '_subnet_id'] }}"
-       image: '{{ ami_id }}'
+       image_id: '{{ ami_id }}'
        wait: yes
        wait_timeout: 500
        exact_count: 1
-       count_tag:
-         role: '{{ build_tag }}'
-       instance_tags:
+       tags:
          role: '{{ build_tag }}'
          Name: 'AMI-{{ params["ProjectName"] }}-{{ params["BuildId"] }}'
          ProjectName: 'AMI-{{ params["ProjectName"] }}'
