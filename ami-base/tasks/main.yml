@@ -51,6 +51,7 @@
       - gettext
       - tree
       - amazon-linux-extras
+      - git
     state: latest
 
 - name: 'Install docker'
