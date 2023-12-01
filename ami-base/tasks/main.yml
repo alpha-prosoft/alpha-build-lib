@@ -12,14 +12,14 @@
 - name: 'Create group'
   group:
     name: "{{ user_name }}"
-    gid: 1033
+    gid: 2024
     system: yes
     state: present
 
 - name: 'Crete user'
   user:
     name: '{{ user_name }}' 
-    uid: 1034
+    uid: 2025
     group: '{{ user_name }}'
     groups: 
     - docker
