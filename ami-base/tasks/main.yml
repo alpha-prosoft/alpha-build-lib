@@ -79,7 +79,7 @@
     - pyjwt
     - requests
     - urllib3==1.26.6
-    executable: pip3.3
+    executable: pip3
 
 
 #- include_tasks: cloudwatch_agent.yml
