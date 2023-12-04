@@ -4,8 +4,8 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-User=ubuntu
-Group=ubuntu
+User=ec2-user
+Group=ec2-user
 ExecStart=/usr/bin/bash -c "env && /usr/bin/python3 /opt/auth_server.py"
 EnvironmentFile=/etc/environment
 Restart=always
