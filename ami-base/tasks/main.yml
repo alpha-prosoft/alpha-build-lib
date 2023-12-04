@@ -74,7 +74,7 @@
     echo "vm.max_map_count=262144" >> /etc/sysctl.conf
 
 
-  ansible.builtin.pip:
+- ansible.builtin.pip:
     name:
     - pyjwt==1.7.1
     - requests
