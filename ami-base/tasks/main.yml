@@ -76,7 +76,7 @@
 
   ansible.builtin.pip:
     name:
-    - pyjwt
+    - pyjwt==1.7.1
     - requests
     - urllib3==1.26.6
     executable: pip3
