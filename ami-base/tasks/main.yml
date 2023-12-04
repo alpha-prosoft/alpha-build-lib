@@ -74,10 +74,13 @@
     echo "vm.max_map_count=262144" >> /etc/sysctl.conf
 
 
-- pip:
-    name: 
+  ansible.builtin.pip:
+    name:
     - pyjwt
     - requests
+    - urllib3==1.26.6
+    executable: pip3.3
+
 
 #- include_tasks: cloudwatch_agent.yml
 
