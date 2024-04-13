@@ -116,6 +116,7 @@
        key_name: '{{ build_tag }}'
        security_group: '{{ sg_group_id }}'
        instance_type: m5.xlarge
+       iam_instance_profile: "{{ ansible_ec2_iam_info['InstanceProfileArn'] }}"
        vpc_subnet_id: "{{ hostvars['localhost']['ansible_ec2_network_interfaces_macs_' + hostvars['localhost']['ansible_ec2_mac'].replace(':', '_') + '_subnet_id'] }}"
        image_id: '{{ ami_id }}'
        wait: yes
@@ -185,10 +186,11 @@
 
   always:
     - name: 'Terminate temporary instance'
-      ec2:
+      ec2_instance:
         state: absent
         region: '{{ ansible_ec2_placement_region }}'
         instance_ids: '{{ ami_instance.instances.0.instance_id }}'
+
 
     - name: 'Remove temporary key pair'
       ec2_key:
