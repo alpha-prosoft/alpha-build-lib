@@ -146,7 +146,8 @@
        port: 22
        search_regex: 'OpenSSH'
        timeout: 300
-
+   - set_fact: 
+       /usr/bin/python3
    - name: 'Trust new host'
      shell: 'ssh-keyscan -p 22  {{ ami_instance.instances.0.network_interfaces.0.private_ip_address }} > /home/build/.ssh/known_hosts'
 
@@ -156,6 +157,9 @@
        apply:
          become: true
          delegate_to: '{{ groups.just_created[0] }}'
+         vars:
+           ansible_python_interpreter: "/usr/bin/python3"
+
      with_items: '{{ installation_roles }}'
      loop_control:
        loop_var: install_role
