@@ -116,7 +116,6 @@
        key_name: '{{ build_tag }}'
        security_group: '{{ sg_group_id }}'
        instance_type: m5.xlarge
-       iam_instance_profile: "{{ hostvars['localhost']['ansible_ec2_iam_info_instanceprofilearn'] }}"
        vpc_subnet_id: "{{ hostvars['localhost']['ansible_ec2_network_interfaces_macs_' + hostvars['localhost']['ansible_ec2_mac'].replace(':', '_') + '_subnet_id'] }}"
        image_id: '{{ ami_id }}'
        wait: yes
