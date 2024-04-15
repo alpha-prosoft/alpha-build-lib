@@ -122,6 +122,12 @@
        wait: yes
        wait_timeout: 500
        exact_count: 1
+       volumes:
+        - device_name: /dev/xvda
+          ebs:
+            volume_size: 300
+            delete_on_termination: true
+            encrypted: true
        tags:
          role: '{{ build_tag }}'
          Name: 'AMI-{{ params["ProjectName"] }}-{{ params["BuildId"] }}'
