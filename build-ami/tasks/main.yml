@@ -61,12 +61,12 @@
         group_id: "{{ hostvars['localhost']['ansible_ec2_network_interfaces_macs_' + hostvars['localhost']['ansible_ec2_mac'].replace(':', '_') + '_security_group_ids'].split(',')[0] }}"
         rule_desc: 'Allow SSH for building'
   register: ami_sg
-  when: amibuild_sg is not defined or amibuild_sg | length == 0
+  when: amibuild_sg is not defined or amibuild_sg.security_groups | length == 0
 
 - name: 'Set AMI Build security group ID from amibuild_sg'
   set_fact:
     sg_group_id: "{{ amibuild_sg.security_groups[0].group_id }}"
-  when: amibuild_sg.security_groups|selectattr("group_id", "defined")|list|length >0
+  when: amibuild_sg.security_groups | selectattr("group_id", "defined") | list | length >0
 
 - name: 'Set AMI Build security group ID from ami_sg'
   set_fact:
