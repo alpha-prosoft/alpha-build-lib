@@ -63,20 +63,17 @@
     echo "Distro $distro"
     url="https://github.com/docker/compose/releases/latest/download/docker-compose-linux-${distro}"
 
+    sudo mkdir -p /usr/local/lib/docker/cli-plugins
     echo "From url $url"
-    curl -L $url \
+    sudo curl -L $url \
        -o /usr/local/lib/docker/cli-plugins/docker-compose
     
-    test -f /usr/local/lib/docker/cli-plugins/docker-compose &&\
-        chown root:root /usr/local/lib/docker/cli-plugins/docker-compose
-    
-    test -f /usr/local/lib/docker/cli-plugins/docker-compose &&\
-        chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
-    
-    echo "Check compose version"
+    chown root:root /usr/local/lib/docker/cli-plugins/docker-compose
+    chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
 
     systemctl restart docker
 
+    echo "Check compose version"
     docker version
     docker compose version
     
