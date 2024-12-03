@@ -81,12 +81,14 @@
     echo "vm.max_map_count=262144" >> /etc/sysctl.conf
     systemctl enable docker
 
-- ansible.builtin.pip:
-    environment: '{{ params }}'
+- name: "Install python depenencies"
+  environment: '{{ params }}'
+  ansible.builtin.pip:
     name:
     - pyjwt
     - requests
     - urllib3
+    - boto3
     executable: pip3
 
 - name: 'Install AWS cli'
