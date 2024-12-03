@@ -5,11 +5,18 @@
      curl -L "https://github.com/traefik/traefik/releases/download/v3.2.1/traefik_v3.2.1_linux_amd64.tar.gz" -o "/tmp/trafik.tar.gz"
      tar -xvf /tmp/trafik.tar.gz -C /opt/
 
+- name: 'Create group'
+  group:
+    name: "traefik"
+    gid: 2039
+    system: yes
+    state: present
+    
 - name: 'Add traefik user'
   user:
-    name: traefik
+    name: "traefik"
     uid: 2040
-    group: traefik
+    group: "traefik"
     system: yes
     state: present
 
