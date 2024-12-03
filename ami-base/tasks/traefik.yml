@@ -1,7 +1,8 @@
-- name: 'Install AWS cli'
+- name: 'Install Traefik as AuthProxy'
+  environment: '{{ params }}'
   shell: |
      set -e
-     curl -L "https://github.com/containous/traefik/releases/download/v2.2.7/traefik_v2.2.7_linux_amd64.tar.gz" -o "/tmp/trafik.tar.gz"
+     curl -L "https://github.com/traefik/traefik/releases/download/v3.2.1/traefik_v3.2.1_linux_amd64.tar.gz" -o "/tmp/trafik.tar.gz"
      tar -xvf /tmp/trafik.tar.gz -C /opt/
 
 - name: 'Add traefik user'
