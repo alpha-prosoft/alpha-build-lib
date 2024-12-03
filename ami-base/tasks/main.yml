@@ -27,9 +27,9 @@
     state: present
  
 # basic packages
-- name: 'Install basic packages via yum'
+- name: 'Install basic packages via dnf'
   yum:
-    use_backend: yum
+    use_backend: dnf
     name:
       - python3-pip
       - zip
@@ -42,8 +42,6 @@
       - openssh-clients
       - bind-utils
       - vim
-      - curl
-      - gnupg2
       - bash-completion
       - less
       - man
