@@ -71,7 +71,7 @@
 - name: 'Set AMI Build security group ID from ami_sg'
   set_fact:
     sg_group_id: "{{ ami_sg.group_id }}"
-  when: ami_sg|selectattr("group_id", "defined")|list|length >0
+  when: ami_sg is defined
 
 - debug:
     var: sg_group_id
