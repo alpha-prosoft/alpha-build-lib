@@ -53,6 +53,7 @@
     state: latest
     
 - name: 'Setup docker'
+  environment: '{{ params }}'
   shell: |
     set -e
     echo '{ "features": { "buildkit": true } }' > /etc/docker/daemon.json
