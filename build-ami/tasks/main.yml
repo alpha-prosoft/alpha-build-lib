@@ -79,10 +79,12 @@
 - name: 'AMI Creation'
   block:
    - name: 'Delete key pair if exits'
-     shell: |
-       aws ec2 delete-key-pair --key-name "{{ build_tag }}" || echo "No key yet"
+     ec2_key:
+       name: '{{ build_tag }}'
+       region: '{{ ansible_ec2_placement_region }}'
+       state: absent
 
-   - name: 'Create temporary key pair'
+   - name: 'Create new temporary key pair'
      ec2_key:
        name: '{{ build_tag }}'
        region: '{{ ansible_ec2_placement_region }}'
