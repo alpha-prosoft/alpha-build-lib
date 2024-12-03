@@ -9,7 +9,10 @@
   user:
     name: traefik
     uid: 2040
- 
+    group: traefik
+    system: yes
+    state: present
+
 - name: 'Create traefik dir'
   file:
     path: /etc/traefik
