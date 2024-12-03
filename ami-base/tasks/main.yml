@@ -54,6 +54,7 @@
     
 - name: 'Setup docker'
   environment: '{{ params }}'
+  become: true
   shell: |
     set -e
     echo '{ "features": { "buildkit": true } }' > /etc/docker/daemon.json
@@ -63,9 +64,9 @@
     echo "Distro $distro"
     url="https://github.com/docker/compose/releases/latest/download/docker-compose-linux-${distro}"
 
-    sudo mkdir -p /usr/local/lib/docker/cli-plugins
+    mkdir -p /usr/local/lib/docker/cli-plugins
     echo "From url $url"
-    sudo curl -L $url \
+    curl -L $url \
        -o /usr/local/lib/docker/cli-plugins/docker-compose
     
     chown root:root /usr/local/lib/docker/cli-plugins/docker-compose
