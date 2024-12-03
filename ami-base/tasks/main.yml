@@ -52,7 +52,6 @@
       - tree
       - git
       - docker
-      - docker-compose-plugin
     state: latest
     
 - name: 'Setup docker'
@@ -60,6 +59,19 @@
     set -e
     echo '{ "features": { "buildkit": true } }' > /etc/docker/daemon.json
     DOCKER_DIR=/usr/lib/docker
+
+    curl -kL --http1.1 https://github.com/docker/compose/releases/latest/download/docker-compose-linux-"$(uname -m)" \
+       -o /usr/local/lib/docker/cli-plugins/docker-compose
+    
+    test -f /usr/local/lib/docker/cli-plugins/docker-compose &&\
+        chown root:root /usr/local/lib/docker/cli-plugins/docker-compose
+    
+    test -f /usr/local/lib/docker/cli-plugins/docker-compose &&\
+        chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
+    
+    echo "Check compose version"
+
+    systemctl restart docker
 
     docker version
     docker compose version
