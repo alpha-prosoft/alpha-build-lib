@@ -58,7 +58,12 @@
     echo '{ "features": { "buildkit": true } }' > /etc/docker/daemon.json
     DOCKER_DIR=/usr/lib/docker
 
-    curl -kL --http1.1 https://github.com/docker/compose/releases/latest/download/docker-compose-linux-"$(uname -m)" \
+    distro="$(uname -m)"
+    echo "Distro $distro"
+    url="https://github.com/docker/compose/releases/latest/download/docker-compose-linux-${distro}"
+
+    echo "From url $url"
+    curl -L $url \
        -o /usr/local/lib/docker/cli-plugins/docker-compose
     
     test -f /usr/local/lib/docker/cli-plugins/docker-compose &&\
