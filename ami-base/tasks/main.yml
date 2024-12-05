@@ -126,4 +126,3 @@
 
 
 - include_tasks: traefik.yml
-- include_tasks: login.yml
