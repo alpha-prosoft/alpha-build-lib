@@ -152,6 +152,7 @@
      shell: 'ssh-keyscan -p 22  {{ ami_instance.instances.0.network_interfaces.0.private_ip_address }} > /home/build/.ssh/known_hosts'
 
    - name: 'Copy certificates and bundle'
+     become: true
      shell: |
         set -euo pipefail
         export remote_host={{ ami_instance.instances.0.network_interfaces.0.private_ip_address }}
