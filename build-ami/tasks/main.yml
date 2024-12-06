@@ -153,6 +153,7 @@
 
    - name: 'Copy certificates and bundle'
      shell: |
+        set -euo pipefail
         export remote_host={{ ami_instance.instances.0.network_interfaces.0.private_ip_address }}
         export remote_user="ec2-user"
         export remote_key={{ ami_dir }}/{{ build_tag }}.pem
