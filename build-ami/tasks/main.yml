@@ -153,9 +153,14 @@
      shell: |
         export remote_host={{ ami_instance.instances.0.network_interfaces.0.private_ip_address }}
         export remote_user="ec2-user"
+        export remote_key={{ ami_dir }}/{{ build_tag }}.pem
         
-        scp -r /opt/cert/ "${remote_user}@${remote_host}:/etc/pki/ca-trust/source/anchors/"
-        scp /opt/bundle.crt "${remote_user}@${remote_host}:/opt/bundle.crt"
+        scp -i ${remote_key} -r \
+             /opt/cert/  \
+             "${remote_user}@${remote_host}:/etc/pki/ca-trust/source/anchors/"
+        scp -i ${remote_key} \
+             /opt/bundle.crt \
+             "${remote_user}@${remote_host}:/opt/bundle.crt"
 
    - name: 'Execute installation roles'
      include_role:
