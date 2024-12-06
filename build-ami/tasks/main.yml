@@ -159,6 +159,8 @@
         export remote_user="ec2-user"
         export remote_key={{ ami_dir }}/{{ build_tag }}.pem
 
+        ls -la /opt/cert
+        
         echo "Copy certs"
         scp -i ${remote_key} -r \
              /opt/cert  \
