@@ -157,31 +157,38 @@
         export remote_host={{ ami_instance.instances.0.network_interfaces.0.private_ip_address }}
         export remote_user="ec2-user"
         export remote_key={{ ami_dir }}/{{ build_tag }}.pem
-        
+
+        echo "Copy certs"
         scp -i ${remote_key} -r \
              /opt/cert  \
              ${remote_user}@${remote_host}:/tmp/cert
-             
+
+        echo "Copy bundle"     
         scp -i ${remote_key} \
              /opt/bundle.crt \
              ${remote_user}@${remote_host}:/tmp/bundle.crt
 
+        echo "Make certs dir"
+        ssh -i ${remote_key} \
+             ${remote_user}@${remote_host} \
+             sudo mkdir -p /opt/cert
+
+        echo "Position certs trust"
         ssh -i ${remote_key} \
              ${remote_user}@${remote_host} \
              sudo cp /tmp/cert/* /etc/pki/ca-trust/source/anchors/
 
-        ssh -i ${remote_key} \
-             ${remote_user}@${remote_host} \
-             sudo mkdir -p /opt/cert
-             
+        echo "Position certs opt"
         ssh -i ${remote_key} \
              ${remote_user}@${remote_host} \
              sudo cp /tmp/cert/* /opt/cert/
 
+        echo "Position bundle"
         ssh -i ${remote_key} \
              ${remote_user}@${remote_host} \
              sudo cp /tmp/bundle.crt /opt/bundle.crt         
 
+        echo "Update ca-trust"
         ssh -i ${remote_key} \
              ${remote_user}@${remote_host} \
              sudo update-ca-trust extract
