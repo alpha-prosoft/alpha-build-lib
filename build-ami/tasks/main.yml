@@ -1,7 +1,6 @@
 - name: "Cleanup"
   environment: '{{ params }}'
   shell: |
-     export AWS_CA_BUNDLE=/etc/pki/tls/certs/ca-bundle.crt
      aws ec2 terminate-instances \
           --instance-ids $(aws ec2 describe-instances \
                             --query 'Reservations[].Instances[].InstanceId' \
@@ -151,7 +150,7 @@
    - name: 'Trust new host'
      shell: 'ssh-keyscan -p 22  {{ ami_instance.instances.0.network_interfaces.0.private_ip_address }} > /home/build/.ssh/known_hosts'
 
-   - name: 'Copy certificates and bundle'
+   - name: 'Copy certificates to target'
      shell: |
         set -euo pipefail
         export remote_host={{ ami_instance.instances.0.network_interfaces.0.private_ip_address }}
@@ -164,11 +163,6 @@
         scp -i ${remote_key} -r \
              /opt/cert  \
              ${remote_user}@${remote_host}:/tmp/cert
-
-        echo "Copy bundle"     
-        scp -i ${remote_key} \
-             /opt/bundle.crt \
-             ${remote_user}@${remote_host}:/tmp/bundle.crt
 
         echo "Make certs dir"
         ssh -i ${remote_key} \
@@ -184,11 +178,6 @@
         ssh -i ${remote_key} \
              ${remote_user}@${remote_host} \
              sudo cp /tmp/cert/* /opt/cert/
-
-        echo "Position bundle"
-        ssh -i ${remote_key} \
-             ${remote_user}@${remote_host} \
-             sudo cp /tmp/bundle.crt /opt/bundle.crt         
 
         echo "Update ca-trust"
         ssh -i ${remote_key} \
