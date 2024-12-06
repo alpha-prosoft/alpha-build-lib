@@ -181,7 +181,7 @@
 
         ssh -i ${remote_key} \
              ${remote_user}@${remote_host} \
-             update-ca-trust extract
+             sudo update-ca-trust extract
              
    - name: 'Execute installation roles'
      include_role:
