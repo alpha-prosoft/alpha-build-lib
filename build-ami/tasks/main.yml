@@ -1,7 +1,7 @@
 - name: "Cleanup"
   environment: '{{ params }}'
   shell: |
-     export AWS_CA_BUNDLE=/opt/bundle.crt
+     export AWS_CA_BUNDLE=/etc/pki/tls/certs/ca-bundle.crt
      aws ec2 terminate-instances \
           --instance-ids $(aws ec2 describe-instances \
                             --query 'Reservations[].Instances[].InstanceId' \
