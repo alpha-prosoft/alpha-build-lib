@@ -172,7 +172,7 @@
              sudo mkdir -p /opt/cert
              
         ssh -i ${remote_key} \
-             "${remote_user}@${remote_host} \
+             ${remote_user}@${remote_host} \
              sudo cp /tmp/cert/* /opt/cert/
 
         ssh -i ${remote_key} \
