@@ -145,8 +145,17 @@
        timeout: 300
    - set_fact: 
        /usr/bin/python3
+       
    - name: 'Trust new host'
      shell: 'ssh-keyscan -p 22  {{ ami_instance.instances.0.network_interfaces.0.private_ip_address }} > /home/build/.ssh/known_hosts'
+
+   - name: 'Copy certificates and bundle'
+     shell: |
+        export remote_host={{ ami_instance.instances.0.network_interfaces.0.private_ip_address }}
+        export remote_user="ec2-user"
+        
+        scp /etc/pki/ca-trust/source/anchors/*.crt "${remote_user}@${remote_host}:/etc/pki/ca-trust/source/anchors/"
+        scp /opt/bundle.crt "${remote_user}@${remote_host}:/opt/bundle.crt"
 
    - name: 'Execute installation roles'
      include_role:
