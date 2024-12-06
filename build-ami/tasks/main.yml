@@ -157,18 +157,18 @@
         
         scp -i ${remote_key} -r \
              /opt/cert  \
-             "${remote_user}@${remote_host}:/tmp/cert"
+             ${remote_user}@${remote_host}:/tmp/cert
              
         scp -i ${remote_key} \
              /opt/bundle.crt \
-             "${remote_user}@${remote_host}:/tmp/bundle.crt"
+             ${remote_user}@${remote_host}:/tmp/bundle.crt
 
         ssh -i ${remote_key} \
-             "${remote_user}@${remote_host} \
+             ${remote_user}@${remote_host} \
              sudo cp /tmp/cert/* /etc/pki/ca-trust/source/anchors/
 
         ssh -i ${remote_key} \
-             "${remote_user}@${remote_host} \
+             ${remote_user}@${remote_host} \
              sudo mkdir -p /opt/cert
              
         ssh -i ${remote_key} \
@@ -176,11 +176,11 @@
              sudo cp /tmp/cert/* /opt/cert/
 
         ssh -i ${remote_key} \
-             "${remote_user}@${remote_host} \
+             ${remote_user}@${remote_host} \
              sudo cp /tmp/bundle.crt /opt/bundle.crt         
 
         ssh -i ${remote_key} \
-             "${remote_user}@${remote_host} \
+             ${remote_user}@${remote_host} \
              update-ca-trust extract
              
    - name: 'Execute installation roles'
