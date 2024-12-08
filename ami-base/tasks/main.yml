@@ -25,7 +25,24 @@
     - docker
     system: yes
     state: present
- 
+
+- name: Create /etc/environment
+  blockinfile:
+    path: /etc/environment
+    create: yes
+    block: |
+      {% for key, value in env_vars.items() %}
+      {{ key }}="{{ value }}"
+      {% endfor %}
+
+- name: Add exports to /etc/bashrc
+  blockinfile:
+    path: /etc/bashrc
+    block: |
+      {% for key, value in env_vars.items() %}
+      export {{ key }}="{{ value }}"
+      {% endfor %}
+  
 # basic packages
 - name: 'Install basic packages via dnf'
   yum:
