@@ -31,7 +31,7 @@
     path: /etc/environment
     create: yes
     block: |
-      {% for key, value in env_vars.items() %}
+      {% for key, value in params.items() %}
       {{ key }}="{{ value }}"
       {% endfor %}
 
@@ -39,7 +39,7 @@
   blockinfile:
     path: /etc/bashrc
     block: |
-      {% for key, value in env_vars.items() %}
+      {% for key, value in params.items() %}
       export {{ key }}="{{ value }}"
       {% endfor %}
   
