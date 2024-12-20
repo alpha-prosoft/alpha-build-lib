@@ -77,6 +77,18 @@
 - debug:
     var: sg_group_id
 
+- name: 'Get config from Parameter Store'
+  amazon.aws.ssm_parameter_store:
+    name: /install/config
+    region: '{{ params["AWS_DEFAULT_REGION"] }}'
+  register: config_parameter
+  ignore_errors: true 
+
+- name: Set builder.associate-public-ip-address
+  set_fact:
+    associate_public_ip: "{{ (config_parameter.value | from_json).builder['associate-public-ip-address'] | bool | default(true) }}"
+  when: config_parameter.value is defined
+
 - name: 'AMI Creation'
   block:
    - name: 'Delete key pair if exits'
@@ -103,7 +115,7 @@
    - name: 'Launch temporary instance'
      amazon.aws.ec2_instance:
        network:
-         assign_public_ip: true
+         assign_public_ip: '{{ associate_public_ip }}'
        region: '{{ ansible_ec2_placement_region }}'
        key_name: '{{ build_tag }}'
        security_group: '{{ sg_group_id }}'
