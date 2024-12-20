@@ -79,16 +79,15 @@
 
 - name: 'Get config from Parameter Store'
   shell: |
-     config_file=$(mktemp)
-     aws ssm get-parameter \
-        --name '/install/config' \
-        --query 'Parameter.Value' \
-        --output text || echo "{}" > $config_file
+     config="$(aws ssm get-parameter \
+                --name '/install/config' \
+                --query 'Parameter.Value' \
+                --output text || echo "{}"")
      
      echo "Current config"
-     cat $config_file
+     echo $config
      public_ip="True"
-     if [[ "$(cat $config_file | jq -r '.builder."associate-public-ip-address" // empty')" == "False" ]]; then 
+     if [[ "$(echo $config | jq -r '.builder."associate-public-ip-address" // empty')" == "False" ]]; then 
        public_ip="False"
      fi
      echo $public_ip
