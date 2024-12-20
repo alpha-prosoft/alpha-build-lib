@@ -87,14 +87,20 @@
      
      echo "Current config"
      cat $config_file
-     public_ip="true"
+     public_ip="True"
      if [[ "$(cat $config_file | jq -r '.builder."associate-public-ip-address" // empty')" == "False" ]]; then 
-       public_ip="false"
+       public_ip="False"
      fi
      echo $public_ip
   register: config_parameter
   ignore_errors: true 
 
+- debug: 
+    msg: "Config stdout: {{ config_parameter.stdout_lines }}"
+
+- debug: 
+    msg: "Public ip: {{ config_parameter.stdout_lines | last | bool }}"
+    
 - name: 'AMI Creation'
   block:
    - name: 'Delete key pair if exits'
