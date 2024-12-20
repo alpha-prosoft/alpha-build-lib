@@ -69,8 +69,8 @@
       - docker
     state: latest
   register: result
-  retries: 3
-  delay: 10
+  retries: 10
+  delay: 20
   until: result is not failed
 
     
