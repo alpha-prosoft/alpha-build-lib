@@ -68,6 +68,11 @@
       - git
       - docker
     state: latest
+  register: result
+  retries: 3
+  delay: 10
+  until: result is not failed
+
     
 - name: 'Setup docker'
   environment: '{{ params }}'
