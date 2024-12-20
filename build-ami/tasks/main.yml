@@ -82,7 +82,7 @@
      config="$(aws ssm get-parameter \
                 --name '/install/config' \
                 --query 'Parameter.Value' \
-                --output text || echo "{}"")
+                --output text || echo "{}")"
      
      echo "Current config"
      echo $config
