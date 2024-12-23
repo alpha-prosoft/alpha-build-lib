@@ -245,6 +245,10 @@
        var: amioutput
 
   always:
+    - name: 'Sleep before termination'
+      shell: |
+         sleep 30
+         
     - name: 'Terminate temporary instance'
       ec2_instance:
         state: absent
