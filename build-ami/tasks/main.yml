@@ -4,7 +4,7 @@
      aws ec2 terminate-instances \
           --instance-ids $(aws ec2 describe-instances \
                             --query 'Reservations[].Instances[].InstanceId' \
-                            --filters "Name=tag:ProjectName,Values=AMI-{{ params["ProjectName"] }}" \
+                            --filters "Name=tag:ProjectService,Values=AMI-{{ params["ProjectName"] }}-{{ params["ServiceName"] }}" \
                             --output text) || echo "No instance"
 
 - name: 'Create temporary build directory'
@@ -15,7 +15,7 @@
 
 - name: 'Set build tag'
   set_fact:
-    build_tag: 'build-{{ params["ProjectName"] }}.b{{ params["BuildId"] }}'
+    build_tag: 'build-{{ params["ProjectName"] }}-{{ params["ServiceName"] }}.b{{ params["BuildId"] }}'
     ami_dir: '{{ build_dir.path }}/ami'
 
 - name: 'Get current instance metadata'
@@ -145,8 +145,8 @@
             encrypted: true
        tags:
          role: '{{ build_tag }}'
-         Name: 'AMI-{{ params["ProjectName"] }}-{{ params["BuildId"] }}'
-         ProjectName: 'AMI-{{ params["ProjectName"] }}'
+         Name: 'AMI-{{ params["ProjectName"] }}-{{ params["ServiceName"] }}-{{ params["BuildId"] }}'
+         ProjectService: 'AMI-{{ params["ProjectName"] }}-{{ params["ServiceName"] }}'
      register: ami_instance
 
    - name: 'Print instance data'
