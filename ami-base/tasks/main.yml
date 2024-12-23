@@ -115,6 +115,7 @@
     - requests
     - urllib3
     - boto3
+    - jinja2
     executable: pip3
 
 - name: 'Install AWS cli'
