@@ -4,6 +4,7 @@ import jwt
 import requests
 import os
 import json
+import auth_custom
 
 cache = {}
 
@@ -28,22 +29,9 @@ class S(BaseHTTPRequestHandler):
             self.wfile.write(json.dumps(userinfo).encode())
             return
 
-
-
         userinfo = cache[header]
-
         token = jwt.decode(header.encode(), verify=False)
-
-        self.send_response(200)
-        self.send_header("Content-type", "text/javascript")
-
-        self.send_header("A-User", userinfo["username"])
-        self.send_header("A-Email", userinfo["email"])
-        self.send_header("A-Name", userinfo["name"])
-
-
-        self.end_headers()
-        self.wfile.write("{\"hello\":\"world\"}".encode())
+        auth_custom.process_token(self, token)
 
 
     def do_GET(self):
