@@ -25,16 +25,16 @@
     path: /etc/traefik
     state: directory
     mode: '0755'
-    owner: traefik
-    group: traefik
+    owner: root
+    group: root
 
 - name: 'Create traefik config dir'
   file:
     path: /etc/traefik/config
     state: directory
     mode: '0755'
-    owner: traefik
-    group: traefik
+    owner: root
+    group: root
 
 
 - name: 'Create traefik log dir'
@@ -59,6 +59,7 @@
     dest: /etc/traefik/traefik.toml
     owner: root
     group: root
+    mode: '0644
 
 - name: 'Copy traefik file config'
   copy:
@@ -66,6 +67,7 @@
     dest: /etc/traefik/config/config.toml
     owner: root
     group: root
+    mode: '0644
 
 - name: 'Enable traefik service'
   systemd:
