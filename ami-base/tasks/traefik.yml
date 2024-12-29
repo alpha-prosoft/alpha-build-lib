@@ -67,12 +67,45 @@
     owner: root
     group: root
 
-
 - name: 'Enable traefik service'
   systemd:
     name: traefik 
-    enabled: no
+    enabled: yes
     state: stopped
 
+- name: 'Install pip deps for traefik user'
+  environment: '{{ params }}'
+  shell: |
+    set -e 
+    pip3 install pyjwt requests urllib3 boto3 jinja2
+  register: result
+  retries: 3
+  delay: 10
+  until: result is not failed
+  become: yes
+  become_user: 'traefik'
 
-- 
+- name: 'Copy docker auth_service'
+  copy:
+    src: 'auth_server.py'
+    dest: '/opt/auth_server.py'
+    mode: '744'
+
+- name: 'Copy docker auth_server'
+  copy:
+    src: 'auth_server.py'
+    dest: '/opt/auth_server.py'
+    mode: '744'
+
+- name: 'Copy auth_service'
+  copy:
+    src: auth_server.service
+    dest: /etc/systemd/system
+    owner: root
+    group: root
+
+- name: 'Enable auth service'
+  systemd:
+    name: auth_server
+    enabled: yes
+    state: stopped

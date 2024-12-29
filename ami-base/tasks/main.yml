@@ -103,7 +103,7 @@
     echo "vm.max_map_count=262144" >> /etc/sysctl.conf
     systemctl enable docker
 
-- name: "Install python depenencies"
+- name: "Install python dependencies for root"
   environment: '{{ params }}'
   register: result
   retries: 3
@@ -130,31 +130,6 @@
   delay: 10
   until: result is not failed
 
-
-- name: 'Copy docker auth_service'
-  copy:
-    src: 'auth_server.py'
-    dest: '/opt/auth_server.py'
-    mode: '744'
-
-- name: 'Copy docker auth_server'
-  copy:
-    src: 'auth_server.py'
-    dest: '/opt/auth_server.py'
-    mode: '744'
-
-- name: 'Copy auth_service'
-  copy:
-    src: auth_server.service
-    dest: /etc/systemd/system
-    owner: root
-    group: root
-
-- name: 'Enable auth service'
-  systemd:
-    name: auth_server
-    enabled: no
-    state: stopped
 
 
 - include_tasks: traefik.yml
