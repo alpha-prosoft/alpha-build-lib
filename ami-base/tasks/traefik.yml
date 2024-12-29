@@ -70,7 +70,7 @@
 - name: 'Enable traefik service'
   systemd:
     name: traefik 
-    enabled: no
+    enabled: yes
     state: stopped
 
 - name: 'Install pip deps for traefik user'
@@ -107,5 +107,5 @@
 - name: 'Enable auth service'
   systemd:
     name: auth_server
-    enabled: no
+    enabled: yes
     state: stopped
