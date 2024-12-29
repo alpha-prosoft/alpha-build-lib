@@ -91,10 +91,16 @@
     dest: '/opt/auth_server.py'
     mode: '744'
 
-- name: 'Copy docker auth_server'
+- name: 'Copy auth_server'
   copy:
     src: 'auth_server.py'
     dest: '/opt/auth_server.py'
+    mode: '744'
+
+- name: 'Copy auth_custom'
+  copy:
+    src: 'auth_custom.py'
+    dest: '/opt/auth_custom.py'
     mode: '744'
 
 - name: 'Copy auth_service'
