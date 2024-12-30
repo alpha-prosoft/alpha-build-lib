@@ -7,10 +7,17 @@ import json
 import auth_custom
 
 cache = {}
-  
-class S(BaseHTTPRequestHandler):
-    jwks_client = None
+jwks_client = None
 
+def init_data():
+    region = os.environ['Region']
+    pool_id = os.environ['AuthUserPoolId']
+    jwks_uri = f"https://cognito-idp.{region}.amazonaws.com/{pool_id}/.well-known/jwks.json"
+    logging.info(f"Fetching JWKS from url {jwks_uri}")
+    jwks_client = jwt.PyJWKClient(jwks_uri)
+
+class S(BaseHTTPRequestHandler):
+  
     def get_proxies(self):
         proxiesDict = {}
         if "https_proxy" in os.environ:
@@ -19,11 +26,6 @@ class S(BaseHTTPRequestHandler):
     
     def __init__(self, *args, **kwargs):
         logging.info("Initializing handler")
-        region = os.environ['Region']
-        pool_id = os.environ['AuthUserPoolId']
-        jwks_uri = f"https://cognito-idp.{region}.amazonaws.com/{pool_id}/.well-known/jwks.json"
-        logging.info(f"Fetching JWKS from url {jwks_uri}")
-        self.jwks_client = jwt.PyJWKClient(jwks_uri)
       
         BaseHTTPRequestHandler.__init__(self, *args, **kwargs)
       
@@ -48,7 +50,7 @@ class S(BaseHTTPRequestHandler):
 
         userinfo = cache[token]
         
-        public_key = self.jwks_client.get_signing_key_from_jwt(token)
+        public_key = jwks_client.get_signing_key_from_jwt(token)
         token = jwt.decode(token.encode(), public_key, algorithms=["RS256"])
         auth_custom.process_token(self, token, userinfo)
 
@@ -80,6 +82,7 @@ def run(server_class=HTTPServer, handler_class=S, port=8081):
     server_address = ('', port)
     httpd = server_class(server_address, handler_class)
   
+    init_data()
     logging.info('Starting httpd...\n')
     try:
         httpd.serve_forever()
