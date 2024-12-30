@@ -10,6 +10,7 @@ cache = {}
 jwks_client = None
 
 def init_data():
+    global jwks_client
     region = os.environ['Region']
     pool_id = os.environ['AuthUserPoolId']
     jwks_uri = f"https://cognito-idp.{region}.amazonaws.com/{pool_id}/.well-known/jwks.json"
