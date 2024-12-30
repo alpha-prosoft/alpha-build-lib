@@ -1,6 +1,6 @@
 
 
-def process_token(response, token):
+def process_token(response, token, userinfo):
     """
     This is default implementation of token check.
     You can just drop your own implementation and replace this
