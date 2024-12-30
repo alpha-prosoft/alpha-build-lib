@@ -15,6 +15,19 @@ def get_proxies():
       proxiesDict = {"https": os.environ["https_proxy"]}
   return proxiesDict
 
+def get_jwks():
+  url = f"https://{os.environ['AuthUserPoolDomain']}/.well-known/jwks.json"
+  response = requests.get(url, proxies=get_proxies())
+  response.raise_for_status()
+  return response.json()
+
+
+def get_public_key(jwks, token):
+  header = jwt.get_unverified_header(token)
+  kid = header['kid']
+  key = jwk.JWK.from_json(jwks['keys'][kid])
+  return key.key 
+  
 class S(BaseHTTPRequestHandler):
 
     def respond(self):
@@ -63,19 +76,6 @@ class S(BaseHTTPRequestHandler):
     def do_OPTIONS(self):
        self.respond()
 
-
-def get_jwks(region, user_pool_id):
-  url = f"https://{os.environ['AuthUserPoolDomain']}/.well-known/jwks.json"
-  response = requests.get(url, proxies=get_proxies())
-  response.raise_for_status()
-  return response.json()
-
-
-def get_public_key(jwks, token):
-  header = jwt.get_unverified_header(token)
-  kid = header['kid']
-  key = jwk.JWK.from_json(jwks['keys'][kid])
-  return key.key 
 
 def run(server_class=HTTPServer, handler_class=S, port=8081):
     logging.basicConfig(level=logging.INFO)
