@@ -36,7 +36,7 @@ class S(BaseHTTPRequestHandler):
           logging.info("Fetching userinfo")
           url = 'https://' + os.environ['AuthUserPoolDomain'] +'/oauth2/userInfo'
           headers = {'Authorization': 'Bearer ' + token}
-          r = requests.get(url, headers=headers, proxies=get_proxies())
+          r = requests.get(url, headers=headers, proxies=self.get_proxies())
           userinfo = r.json()
           if "error" not in userinfo:
             cache[token] = userinfo
