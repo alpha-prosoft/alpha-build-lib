@@ -18,7 +18,7 @@ def get_proxies():
 def get_jwks():
   region = os.environ['Region']
   pool_id = os.environ['AuthUserPoolId']
-  url = f"https://cognito-idp.{region}.amazonaws.com/{oool_id}/.well-known/jwks.json"
+  url = f"https://cognito-idp.{region}.amazonaws.com/{pool_id}/.well-known/jwks.json"
 
   response = requests.get(url, proxies=get_proxies())
   response.raise_for_status()
@@ -34,24 +34,24 @@ def get_public_key(jwks, token):
 class S(BaseHTTPRequestHandler):
 
     def respond(self):
-        header = self.headers['X-Amzn-Oidc-Accesstoken']
+        token = self.headers['X-Amzn-Oidc-Accesstoken']
           
         userinfo = {}
-        if header not in cache:
+        if token not in cache:
           logging.info("Fetching userinfo")
           url = 'https://' + os.environ['AuthUserPoolDomain'] +'/oauth2/userInfo'
-          headers = {'Authorization': 'Bearer ' + header}
+          headers = {'Authorization': 'Bearer ' + token}
           r = requests.get(url, headers=headers, proxies=get_proxies())
           userinfo = r.json()
           if "error" not in userinfo:
-            cache[header] = userinfo
+            cache[token] = userinfo
           else:
             self.send_response(401)
             self.end_headers()
             self.wfile.write(json.dumps(userinfo).encode())
             return
 
-        userinfo = cache[header]
+        userinfo = cache[token]
         
         public_key = get_public_key(jwks, token)
         token = jwt.decode(header.encode(), public_key, algorithms=["RS256"])
