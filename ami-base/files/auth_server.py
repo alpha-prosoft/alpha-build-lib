@@ -50,7 +50,7 @@ class S(BaseHTTPRequestHandler):
         
         public_key = self.jwks_client.get_signing_key_from_jwt(token)
         token = jwt.decode(token.encode(), public_key, algorithms=["RS256"])
-        auth_custom.process_token(self, token)
+        auth_custom.process_token(self, token, userinfo)
 
     def do_GET(self):
        self.respond()
