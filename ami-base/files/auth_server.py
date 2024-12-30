@@ -7,9 +7,15 @@ import json
 import auth_custom
 
 cache = {}
+jwks = None
+
+def get_proxies():
+  proxiesDict = {}
+  if "https_proxy" in os.environ:
+      proxiesDict = {"https": os.environ["https_proxy"]}
+  return proxiesDict
 
 class S(BaseHTTPRequestHandler):
-
 
     def respond(self):
         header = self.headers['X-Amzn-Oidc-Accesstoken']
@@ -19,7 +25,7 @@ class S(BaseHTTPRequestHandler):
           logging.info("Fetching userinfo")
           url = 'https://' + os.environ['AuthUserPoolDomain'] +'/oauth2/userInfo'
           headers = {'Authorization': 'Bearer ' + header}
-          r = requests.get(url, headers=headers)
+          r = requests.get(url, headers=headers, proxies=get_proxies())
           userinfo = r.json()
           if "error" not in userinfo:
             cache[header] = userinfo
@@ -30,9 +36,10 @@ class S(BaseHTTPRequestHandler):
             return
 
         userinfo = cache[header]
-        token = jwt.decode(header.encode(), verify=False)
+        
+        public_key = get_public_key(jwks, token)
+        token = jwt.decode(header.encode(), public_key, algorithms=["RS256"])
         auth_custom.process_token(self, token)
-
 
     def do_GET(self):
        self.respond()
@@ -57,12 +64,27 @@ class S(BaseHTTPRequestHandler):
        self.respond()
 
 
+def get_jwks(region, user_pool_id):
+  url = f"https://{os.environ['AuthUserPoolDomain']}/.well-known/jwks.json"
+  response = requests.get(url, proxies=get_proxies())
+  response.raise_for_status()
+  return response.json()
 
+
+def get_public_key(jwks, token):
+  header = jwt.get_unverified_header(token)
+  kid = header['kid']
+  key = jwk.JWK.from_json(jwks['keys'][kid])
+  return key.key 
 
 def run(server_class=HTTPServer, handler_class=S, port=8081):
     logging.basicConfig(level=logging.INFO)
     server_address = ('', port)
     httpd = server_class(server_address, handler_class)
+
+    logging.info('Fetching JWKS...\n')
+    jwks = get_jwks() 
+
     logging.info('Starting httpd...\n')
     try:
         httpd.serve_forever()
