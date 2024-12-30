@@ -9,7 +9,7 @@ def process_token(response, token, userinfo):
     """
     response.send_response(200)
     response.send_header("Content-type", "text/javascript")
-    user = userinfo["username"].splig("@")[0]
+    user = userinfo["username"].split("@")[0]
     response.send_header("A-User", user)
     response.send_header("A-Email", userinfo["email"])
     response.send_header("A-Name", userinfo["name"])
