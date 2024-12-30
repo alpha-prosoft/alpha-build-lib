@@ -59,7 +59,7 @@
     dest: /etc/traefik/traefik.toml
     owner: root
     group: root
-    mode: '0644
+    mode: '0644'
 
 - name: 'Copy traefik file config'
   copy:
@@ -67,7 +67,7 @@
     dest: /etc/traefik/config/config.toml
     owner: root
     group: root
-    mode: '0644
+    mode: '0644'
 
 - name: 'Enable traefik service'
   systemd:
