@@ -7,31 +7,26 @@ import json
 import auth_custom
 
 cache = {}
-jwks = None
-
-def get_proxies():
-  proxiesDict = {}
-  if "https_proxy" in os.environ:
-      proxiesDict = {"https": os.environ["https_proxy"]}
-  return proxiesDict
-
-def get_jwks():
-  region = os.environ['Region']
-  pool_id = os.environ['AuthUserPoolId']
-  url = f"https://cognito-idp.{region}.amazonaws.com/{pool_id}/.well-known/jwks.json"
-
-  response = requests.get(url, proxies=get_proxies())
-  response.raise_for_status()
-  return response.json()
-
-
-def get_public_key(jwks, token):
-  header = jwt.get_unverified_header(token)
-  kid = header['kid']
-  key = jwk.JWK.from_json(jwks['keys'][kid])
-  return key.key 
   
 class S(BaseHTTPRequestHandler):
+    jwks_client = None
+
+    def get_proxies(self):
+        proxiesDict = {}
+        if "https_proxy" in os.environ:
+            proxiesDict = {"https": os.environ["https_proxy"]}
+        return proxiesDict
+    
+    def __init__(self, *args, **kwargs):
+        logging.info("Initializing handler")
+        region = os.environ['Region']
+        pool_id = os.environ['AuthUserPoolId']
+        jwks_uri = f"https://cognito-idp.{region}.amazonaws.com/{pool_id}/.well-known/jwks.json"
+        logging.info(f"Fetching JWKS from url {jwks_uri}")
+        self.jwks_client = jwt.PyJWKClient(jwks_uri)
+      
+        BaseHTTPRequestHandler.__init__(self, *args, **kwargs)
+      
 
     def respond(self):
         token = self.headers['X-Amzn-Oidc-Accesstoken']
@@ -53,7 +48,7 @@ class S(BaseHTTPRequestHandler):
 
         userinfo = cache[token]
         
-        public_key = get_public_key(jwks, token)
+        public_key = self.jwks_client.get_signing_key_from_jwt(token)
         token = jwt.decode(header.encode(), public_key, algorithms=["RS256"])
         auth_custom.process_token(self, token)
 
@@ -84,10 +79,7 @@ def run(server_class=HTTPServer, handler_class=S, port=8081):
     logging.basicConfig(level=logging.INFO)
     server_address = ('', port)
     httpd = server_class(server_address, handler_class)
-
-    logging.info('Fetching JWKS...\n')
-    jwks = get_jwks() 
-
+  
     logging.info('Starting httpd...\n')
     try:
         httpd.serve_forever()
