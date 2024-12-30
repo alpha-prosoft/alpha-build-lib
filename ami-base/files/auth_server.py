@@ -16,7 +16,10 @@ def get_proxies():
   return proxiesDict
 
 def get_jwks():
-  url = f"https://{os.environ['AuthUserPoolDomain']}/.well-known/jwks.json"
+  region = os.environ['Region']
+  pool_id = os.environ['AuthUserPoolId']
+  url = f"https://cognito-idp.{region}.amazonaws.com/{oool_id}/.well-known/jwks.json"
+
   response = requests.get(url, proxies=get_proxies())
   response.raise_for_status()
   return response.json()
