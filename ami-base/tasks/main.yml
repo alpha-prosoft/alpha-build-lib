@@ -97,12 +97,12 @@
   yum:
     use_backend: dnf
     name:
-      - docker-ce
-      - docker-ce-cli
+      - docker-ce-27.5.1
+      - docker-ce-cli-27.5.1
       - containerd.io
       - docker-buildx-plugin
       - docker-compose-plugin
-    state: latest
+    state: present
   register: result
   retries: 10
   delay: 20
