@@ -102,7 +102,6 @@
 
     echo "Check docker and compose version"
     docker version
-    docker compose version
     
     echo "vm.max_map_count=262144" >> /etc/sysctl.conf
 
