@@ -84,8 +84,6 @@
     use_backend: dnf
     name:
       - docker
-      - docker-buildx-plugin
-      - docker-compose-plugin
     state: present
   register: result
   retries: 10
@@ -107,6 +105,32 @@
     docker compose version
     
     echo "vm.max_map_count=262144" >> /etc/sysctl.conf
+
+- name: 'Define Docker Plugin Versions'
+  set_fact:
+    buildx_version: "v0.20.1"
+    compose_version: "v2.32.4"
+
+- name: 'Install Docker Buildx Plugin'
+  get_url:
+    url: "https://github.com/docker/buildx/releases/download/{{ buildx_version }}/buildx-{{ buildx_version }}.linux-amd64"
+    dest: /usr/libexec/docker/cli-plugins/docker-buildx
+    mode: '0755'
+    force: yes  # Ensures it updates if you change the version
+
+- name: 'Install Docker Compose Plugin'
+  get_url:
+    url: "https://github.com/docker/compose/releases/download/{{ compose_version }}/docker-compose-linux-x86_64"
+    dest: /usr/libexec/docker/cli-plugins/docker-compose
+    mode: '0755'
+    force: yes
+
+
+- name: 'Version check'
+  shell: |
+    set -e
+    docker buildx version
+    docker compose version
 
 - name: "Install python dependencies for root"
   environment: '{{ params }}'
