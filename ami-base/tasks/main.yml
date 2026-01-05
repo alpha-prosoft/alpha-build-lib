@@ -87,6 +87,12 @@
     executable: /bin/bash
     creates: /etc/yum.repos.d/docker-ce.repo
 
+- name: 'Fix Docker repository releasever for Amazon Linux 2023'
+  replace:
+    path: /etc/yum.repos.d/docker-ce.repo
+    regexp: '\$releasever'
+    replace: '41'
+
 - name: 'Install Docker from official repository'
   yum:
     use_backend: dnf
