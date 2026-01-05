@@ -72,11 +72,19 @@
   delay: 20
   until: result is not failed
 
+# Install dnf-plugins-core for config-manager
+- name: 'Install dnf-plugins-core'
+  yum:
+    use_backend: dnf
+    name: dnf-plugins-core
+    state: present
+
 # Setup Docker repository
 - name: 'Add Docker repository'
   shell: |
-    dnf config-manager addrepo --from-repofile https://download.docker.com/linux/fedora/docker-ce.repo
+    dnf config-manager --add-repo https://download.docker.com/linux/fedora/docker-ce.repo
   args:
+    executable: /bin/bash
     creates: /etc/yum.repos.d/docker-ce.repo
 
 - name: 'Install Docker from official repository'
