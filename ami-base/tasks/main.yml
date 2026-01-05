@@ -66,7 +66,28 @@
       - gettext
       - tree
       - git
-      - docker
+    state: latest
+  register: result
+  retries: 10
+  delay: 20
+  until: result is not failed
+
+# Setup Docker repository
+- name: 'Add Docker repository'
+  shell: |
+    dnf config-manager addrepo --from-repofile https://download.docker.com/linux/fedora/docker-ce.repo
+  args:
+    creates: /etc/yum.repos.d/docker-ce.repo
+
+- name: 'Install Docker from official repository'
+  yum:
+    use_backend: dnf
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-buildx-plugin
+      - docker-compose-plugin
     state: latest
   register: result
   retries: 10
@@ -80,28 +101,14 @@
   shell: |
     set -e
     echo '{ "features": { "buildkit": true } }' > /etc/docker/daemon.json
-    DOCKER_DIR=/usr/lib/docker
 
-    distro="$(uname -m)"
-    echo "Distro $distro"
-    url="https://github.com/docker/compose/releases/latest/download/docker-compose-linux-${distro}"
+    systemctl enable --now docker
 
-    mkdir -p /usr/local/lib/docker/cli-plugins
-    echo "From url $url"
-    curl -L $url \
-       -o /usr/local/lib/docker/cli-plugins/docker-compose
-    
-    chown root:root /usr/local/lib/docker/cli-plugins/docker-compose
-    chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
-
-    systemctl restart docker
-
-    echo "Check compose version"
+    echo "Check docker and compose version"
     docker version
     docker compose version
     
     echo "vm.max_map_count=262144" >> /etc/sysctl.conf
-    systemctl enable docker
 
 - name: "Install python dependencies for root"
   environment: '{{ params }}'
