@@ -79,27 +79,11 @@
     name: dnf-plugins-core
     state: present
 
-# Setup Docker repository
-- name: 'Add Docker repository'
-  shell: |
-    dnf config-manager --add-repo https://download.docker.com/linux/fedora/docker-ce.repo
-  args:
-    executable: /bin/bash
-    creates: /etc/yum.repos.d/docker-ce.repo
-
-- name: 'Fix Docker repository releasever for Amazon Linux 2023'
-  replace:
-    path: /etc/yum.repos.d/docker-ce.repo
-    regexp: '\$releasever'
-    replace: '41'
-
 - name: 'Install Docker from official repository'
   yum:
     use_backend: dnf
     name:
-      - docker-ce-27.5.1
-      - docker-ce-cli-27.5.1
-      - containerd.io
+      - docker
       - docker-buildx-plugin
       - docker-compose-plugin
     state: present
