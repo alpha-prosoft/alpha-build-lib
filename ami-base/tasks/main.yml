@@ -145,7 +145,7 @@
     - boto3
     - jinja2
     executable: pip3
-    extra_args: "{{ '-i ' + lookup('env', 'PIP_INDEX_URL') if lookup('env', 'PIP_INDEX_URL') else '' }}"
+    extra_args: "{{ '-i ' + pipe_index_url if pipe_index_url else '' }}"
 
 - name: 'Install AWS cli'
   environment: '{{ params }}'
