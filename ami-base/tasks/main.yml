@@ -131,6 +131,9 @@
     docker buildx version
     docker compose version
 
+- debug: 
+    msg: "Pip index: {{ '-i ' + pip_index_url if pip_index_url else '' }}"
+
 - name: "Install python dependencies for root"
   environment: '{{ params }}'
   register: result
@@ -145,7 +148,7 @@
     - boto3
     - jinja2
     executable: pip3
-    extra_args: "{{ '-i ' + pipe_index_url if pipe_index_url else '' }}"
+    extra_args: "{{ '-i ' + pip_index_url if pip_index_url else '' }}"
 
 - name: 'Install AWS cli'
   environment: '{{ params }}'
