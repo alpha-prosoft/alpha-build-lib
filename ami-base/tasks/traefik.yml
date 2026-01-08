@@ -79,7 +79,7 @@
   environment: '{{ params }}'
   shell: |
     set -e 
-    pip3 install pyjwt requests urllib3 boto3 jinja2
+    pip3 install  {{ '-i ' + pip_index_url if pip_index_url else '' }} pyjwt requests urllib3 boto3 jinja2
   register: result
   retries: 3
   delay: 10
