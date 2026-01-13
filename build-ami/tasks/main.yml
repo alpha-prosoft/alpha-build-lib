@@ -294,7 +294,6 @@
            volume_type: gp3
            delete_on_termination: true
            encrypted: true
-           kms_key_id: '{{ kms_key_result.key_id }}'
      register: amioutput
 
    - name: 'Add AMI Id to artifacts'
