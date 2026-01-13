@@ -99,6 +99,64 @@
 
 - debug: 
     msg: "Public ip: {{ config_parameter.stdout_lines | last | bool }}"
+
+- name: 'Get AWS account ID'
+  shell: aws sts get-caller-identity --query Account --output text
+  register: aws_account_id_result
+
+- name: 'Set AWS account ID fact'
+  set_fact:
+    aws_account_id: '{{ aws_account_id_result.stdout }}'
+
+- debug:
+    msg: "AWS Account ID: {{ aws_account_id }}"
+
+- name: 'Create KMS key for EBS encryption'
+  community.aws.kms_key:
+    alias: 'alias/ami-build-{{ params["ProjectName"] }}-{{ params["ServiceName"] }}'
+    description: 'KMS key for AMI build encryption - {{ params["ProjectName"] }}/{{ params["ServiceName"] }}'
+    region: '{{ ansible_ec2_placement_region }}'
+    enabled: yes
+    state: present
+    policy: |
+      {
+        "Version": "2012-10-17",
+        "Statement": [
+          {
+            "Sid": "Enable IAM User Permissions",
+            "Effect": "Allow",
+            "Principal": {
+              "AWS": "arn:aws:iam::{{ aws_account_id }}:root"
+            },
+            "Action": "kms:*",
+            "Resource": "*"
+          },
+          {
+            "Sid": "Allow use of the key for EC2",
+            "Effect": "Allow",
+            "Principal": {
+              "Service": "ec2.amazonaws.com"
+            },
+            "Action": [
+              "kms:Decrypt",
+              "kms:Encrypt",
+              "kms:ReEncrypt*",
+              "kms:GenerateDataKey*",
+              "kms:CreateGrant",
+              "kms:DescribeKey"
+            ],
+            "Resource": "*"
+          }
+        ]
+      }
+    tags:
+      Project: '{{ params["ProjectName"] }}'
+      Service: '{{ params["ServiceName"] }}'
+      Purpose: 'AMI-Build-Encryption'
+  register: kms_key_result
+
+- debug:
+    msg: "KMS Key ID: {{ kms_key_result.key_id }}"
     
 - name: 'AMI Creation'
   block:
@@ -143,6 +201,7 @@
             volume_size: 300
             delete_on_termination: true
             encrypted: true
+            kms_key_id: '{{ kms_key_result.key_id }}'
        tags:
          role: '{{ build_tag }}'
          Name: 'AMI-{{ params["ProjectName"] }}-{{ params["ServiceName"] }}-{{ params["BuildId"] }}'
@@ -230,6 +289,12 @@
        name: '{{ build_tag }}'
        wait: yes
        root_device_name: /dev/sda
+       device_mapping:
+         - device_name: /dev/sda
+           volume_type: gp3
+           delete_on_termination: true
+           encrypted: true
+           kms_key_id: '{{ kms_key_result.key_id }}'
      register: amioutput
 
    - name: 'Add AMI Id to artifacts'
