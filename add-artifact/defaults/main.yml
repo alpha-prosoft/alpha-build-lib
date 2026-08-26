@@ -1,0 +1,1 @@
+artifacts_file: "{{ lookup('env', 'ARTIFACTS_FILE') | default('/dist/artifacts.json', true) }}"

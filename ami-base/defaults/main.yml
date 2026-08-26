@@ -1,0 +1,1 @@
+pip_index_url: "{{ params['PIP_INDEX_URL'] | default(lookup('env', 'PIP_INDEX_URL'), true) }}"

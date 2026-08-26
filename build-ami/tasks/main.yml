@@ -1,121 +1,166 @@
-- name: "Cleanup"
+- name: 'Set build facts'
+  set_fact:
+    resource_name: '{{ params["ResourceName"] }}'
+    build_tag: 'build-{{ params["ResourceName"] }}.b{{ params["BuildId"] }}'
+
+- name: 'Terminate leftover build instances from previous runs'
   environment: '{{ params }}'
   shell: |
-     aws ec2 terminate-instances \
-          --instance-ids $(aws ec2 describe-instances \
-                            --query 'Reservations[].Instances[].InstanceId' \
-                            --filters "Name=tag:ProjectService,Values=AMI-{{ params["ProjectName"] }}-{{ params["ServiceName"] }}" \
-                            --output text) || echo "No instance"
+    set -euo pipefail
+    instance_ids="$(aws ec2 describe-instances \
+        --filters "Name=tag:Purpose,Values=ami-build" \
+                  "Name=tag:ResourceName,Values={{ resource_name }}" \
+                  "Name=instance-state-name,Values=pending,running,stopping,stopped" \
+        --query 'Reservations[].Instances[].InstanceId' \
+        --output text)"
+    if [[ -n "${instance_ids}" ]]; then
+      aws ec2 terminate-instances --instance-ids ${instance_ids}
+    else
+      echo "No leftover instances"
+    fi
 
 - name: 'Create temporary build directory'
   tempfile:
     state: directory
     suffix: build
-  register: build_dir 
+  register: build_dir
 
-- name: 'Set build tag'
+- name: 'Set SSH file paths'
   set_fact:
-    build_tag: 'build-{{ params["ProjectName"] }}-{{ params["ServiceName"] }}.b{{ params["BuildId"] }}'
-    ami_dir: '{{ build_dir.path }}/ami'
+    private_key_file: '{{ build_dir.path }}/{{ build_tag }}.pem'
+    known_hosts_file: '{{ build_dir.path }}/known_hosts'
 
-- name: 'Get current instance metadata'
-  ec2_metadata_facts:
-  retries: 5
-  delay: 10
-  register: result
-  until: result is not failed
+- name: 'Detect EC2 instance metadata service'
+  uri:
+    url: 'http://169.254.169.254/latest/api/token'
+    method: PUT
+    headers:
+      X-aws-ec2-metadata-token-ttl-seconds: '60'
+    timeout: 2
+  register: imds
+  failed_when: false
 
-- name: 'Create .ami directory to keep temoprary data'
-  file:
-    path: '{{ ami_dir }}'
-    state: directory
-    mode: '0700'
-    
-- name: 'Pick same AMI as current instance'
-  set_fact:
-    ami_id: '{{ ansible_ec2_ami_id }}'
-    
+- name: 'Builder facts from instance metadata'
+  when: imds.status | default(0) == 200
+  block:
+    - name: 'Get current instance metadata'
+      ec2_metadata_facts:
+      retries: 5
+      delay: 10
+      register: result
+      until: result is not failed
+
+    - name: 'Set facts from current instance'
+      set_fact:
+        ami_id: '{{ ansible_ec2_ami_id }}'
+        region: '{{ ansible_ec2_placement_region }}'
+        instance_profile_arn: '{{ ansible_ec2_iam_info_instanceprofilearn }}'
+        mac_key: "ansible_ec2_network_interfaces_macs_{{ ansible_ec2_mac | replace(':', '_') }}"
+
+    - name: 'Set network facts from current instance'
+      set_fact:
+        vpc_id: "{{ hostvars['localhost'][mac_key + '_vpc_id'] }}"
+        subnet_id: "{{ hostvars['localhost'][mac_key + '_subnet_id'] }}"
+        ssh_source:
+          group_id: "{{ hostvars['localhost'][mac_key + '_security_group_ids'].split(',')[0] }}"
+
+- name: 'Builder facts from workstation (no instance metadata)'
+  when: imds.status | default(0) != 200
+  block:
+    - name: 'Set region from params'
+      set_fact:
+        region: '{{ params["AWS_DEFAULT_REGION"] }}'
+
+    - name: 'Find builder subnet'
+      ec2_vpc_subnet_info:
+        region: '{{ region }}'
+        subnet_ids: '{{ [builder_subnet_id] if builder_subnet_id is defined else omit }}'
+        filters: '{{ omit if builder_subnet_id is defined else {"tag:Name": "*PrivateSubnet1A"} }}'
+      register: builder_subnets
+
+    - name: 'Find builder VPC'
+      ec2_vpc_net_info:
+        region: '{{ region }}'
+        vpc_ids: '{{ builder_subnets.subnets[0].vpc_id }}'
+      register: builder_vpcs
+
+    - name: 'Set network facts from builder subnet'
+      set_fact:
+        vpc_id: '{{ builder_subnets.subnets[0].vpc_id }}'
+        subnet_id: '{{ builder_subnets.subnets[0].subnet_id }}'
+        ssh_source:
+          cidr_ip: '{{ builder_vpcs.vpcs[0].cidr_block }}'
+
+    - name: 'Find latest Amazon Linux 2023 AMI'
+      amazon.aws.ec2_ami_info:
+        region: '{{ region }}'
+        owners: amazon
+        filters:
+          name: 'al2023-ami-2023.*-kernel-*-x86_64'
+          state: available
+          architecture: x86_64
+      register: al2023_amis
+      when: builder_ami_id is not defined
+
+    - name: 'Set base AMI id'
+      set_fact:
+        ami_id: "{{ builder_ami_id | default((al2023_amis.images | sort(attribute='creation_date'))[-1].image_id, true) }}"
+
+    - name: 'Set instance profile for temporary instance'
+      set_fact:
+        instance_profile_arn: '{{ builder_instance_profile_arn }}'
+      when: builder_instance_profile_arn is defined
+
 - debug:
-    var: ami_id
-    
-- name: 'Find AMI-build security group'
-  ec2_group_info:
-    region: '{{ ansible_ec2_placement_region }}'
-    filters:
-      group-name: 'AMI-Build-SG'
-  register: amibuild_sg
-  ignore_errors: True
-  
-- debug: 
-    var: amibuild_sg
+    msg: 'Building {{ build_tag }} from {{ ami_id }} in {{ region }} ({{ vpc_id }}/{{ subnet_id }})'
 
-- name: 'Create security group for access to this instance'
+- name: 'Ensure security group allowing SSH from build server'
   ec2_group:
     name: 'AMI-Build-SG'
     description: 'Allow access from build server'
-    vpc_id: "{{ hostvars['localhost']['ansible_ec2_network_interfaces_macs_' + hostvars['localhost']['ansible_ec2_mac'].replace(':', '_') + '_vpc_id'] }}"
-    region: '{{ ansible_ec2_placement_region }}'
+    vpc_id: '{{ vpc_id }}'
+    region: '{{ region }}'
+    purge_rules: no
+    purge_rules_egress: no
+    purge_tags: no
     rules:
-      - proto: tcp
-        ports:
-          - 22
-        group_id: "{{ hostvars['localhost']['ansible_ec2_network_interfaces_macs_' + hostvars['localhost']['ansible_ec2_mac'].replace(':', '_') + '_security_group_ids'].split(',')[0] }}"
-        rule_desc: 'Allow SSH for building'
+      - "{{ {'proto': 'tcp', 'ports': [22], 'rule_desc': 'Allow SSH for building'} | combine(ssh_source) }}"
   register: ami_sg
-  when: amibuild_sg is not defined or amibuild_sg.security_groups | length == 0
 
-- name: 'Set AMI Build security group ID from amibuild_sg'
+- name: 'Set AMI build security group ID'
   set_fact:
-    sg_group_id: "{{ amibuild_sg.security_groups[0].group_id }}"
-  when: amibuild_sg.security_groups | selectattr("group_id", "defined") | list | length >0
+    sg_group_id: '{{ ami_sg.group_id }}'
 
-- name: 'Set AMI Build security group ID from ami_sg'
-  set_fact:
-    sg_group_id: "{{ ami_sg.group_id }}"
-  when: "ami_sg is defined and 'group_id' in ami_sg"
-
-- debug:
-    var: sg_group_id
-
-- name: 'Get config from Parameter Store'
+- name: 'Read builder config from Parameter Store'
+  environment: '{{ params }}'
   shell: |
-     config="$(aws ssm get-parameter \
+    config="$(aws ssm get-parameter \
                 --name '/install/config' \
                 --query 'Parameter.Value' \
-                --output text || echo "{}")"
-     
-     echo "Current config"
-     echo $config
-     public_ip="True"
-     if [[ "$(echo $config | jq -r '.builder."associate-public-ip-address" // empty')" == "False" ]]; then 
-       public_ip="False"
-     fi
-     echo $public_ip
-  register: config_parameter
-  ignore_errors: true 
+                --output text 2>/dev/null || echo '{}')"
+    echo "${config}" \
+      | jq -r '.builder."associate-public-ip-address" | if . == null then true else . end | tostring' \
+      || echo "True"
+  register: builder_public_ip
+  changed_when: false
 
-- debug: 
-    msg: "Config stdout: {{ config_parameter.stdout_lines }}"
-
-- debug: 
-    msg: "Public ip: {{ config_parameter.stdout_lines | last | bool }}"
-
-- name: 'Get AWS account ID'
-  shell: aws sts get-caller-identity --query Account --output text
-  register: aws_account_id_result
-
-- name: 'Set AWS account ID fact'
+- name: 'Set public IP assignment'
   set_fact:
-    aws_account_id: '{{ aws_account_id_result.stdout }}'
+    assign_public_ip: '{{ builder_public_ip.stdout_lines | last | bool }}'
 
 - debug:
-    msg: "AWS Account ID: {{ aws_account_id }}"
+    msg: 'Assign public IP: {{ assign_public_ip }}'
+
+- name: 'Get AWS account ID'
+  aws_caller_info:
+    region: '{{ region }}'
+  register: caller_info
 
 - name: 'Create KMS key for EBS encryption'
   community.aws.kms_key:
-    alias: 'alias/ami-build-{{ params["ProjectName"] }}-{{ params["ServiceName"] }}'
-    description: 'KMS key for AMI build encryption - {{ params["ProjectName"] }}/{{ params["ServiceName"] }}'
-    region: '{{ ansible_ec2_placement_region }}'
+    alias: 'alias/ami-build-{{ resource_name }}'
+    description: 'KMS key for AMI build encryption - {{ resource_name }}'
+    region: '{{ region }}'
     enabled: yes
     state: present
     policy: |
@@ -126,7 +171,7 @@
             "Sid": "Enable IAM User Permissions",
             "Effect": "Allow",
             "Principal": {
-              "AWS": "arn:aws:iam::{{ aws_account_id }}:root"
+              "AWS": "arn:aws:iam::{{ caller_info.account }}:root"
             },
             "Action": "kms:*",
             "Resource": "*"
@@ -150,47 +195,43 @@
         ]
       }
     tags:
-      Project: '{{ params["ProjectName"] }}'
-      Service: '{{ params["ServiceName"] }}'
-      Purpose: 'AMI-Build-Encryption'
+      ResourceName: '{{ resource_name }}'
+      Purpose: 'ami-build'
   register: kms_key_result
 
 - debug:
-    msg: "KMS Key ID: {{ kms_key_result.key_id }}"
-    
+    msg: 'KMS Key ID: {{ kms_key_result.key_id }}'
+
 - name: 'AMI Creation'
   block:
-   - name: 'Delete key pair if exits'
+   - name: 'Delete key pair if exists'
      ec2_key:
        name: '{{ build_tag }}'
-       region: '{{ ansible_ec2_placement_region }}'
+       region: '{{ region }}'
        state: absent
 
    - name: 'Create new temporary key pair'
      ec2_key:
        name: '{{ build_tag }}'
-       region: '{{ ansible_ec2_placement_region }}'
+       region: '{{ region }}'
      register: ec2_key_result
 
-   - debug:
-       var: ec2_key_result.msg
- 
    - name: 'Save private key'
      copy:
        content: '{{ ec2_key_result.key.private_key }}'
-       dest: '{{ ami_dir }}/{{ build_tag }}.pem'
+       dest: '{{ private_key_file }}'
        mode: '0600'
- 
+
    - name: 'Launch temporary instance'
      amazon.aws.ec2_instance:
        network:
-         assign_public_ip: '{{ config_parameter.stdout_lines | last | bool }}'
-       region: '{{ ansible_ec2_placement_region }}'
+         assign_public_ip: '{{ assign_public_ip }}'
+       region: '{{ region }}'
        key_name: '{{ build_tag }}'
        security_group: '{{ sg_group_id }}'
        instance_type: m5.xlarge
-       iam_instance_profile: "{{ hostvars['localhost']['ansible_ec2_iam_info_instanceprofilearn'] }}"
-       vpc_subnet_id: "{{ hostvars['localhost']['ansible_ec2_network_interfaces_macs_' + hostvars['localhost']['ansible_ec2_mac'].replace(':', '_') + '_subnet_id'] }}"
+       iam_instance_profile: '{{ instance_profile_arn | default(omit) }}'
+       vpc_subnet_id: '{{ subnet_id }}'
        image_id: '{{ ami_id }}'
        wait: yes
        wait_timeout: 500
@@ -203,69 +244,59 @@
             encrypted: true
             kms_key_id: '{{ kms_key_result.key_id }}'
        tags:
-        role: '{{ build_tag }}'
-        Name: 'AMI-{{ params["ProjectName"] }}-{{ params["ServiceName"] }}-{{ params["BuildId"] }}'
-        ProjectService: 'AMI-{{ params["ProjectName"] }}-{{ params["ServiceName"] }}'
+        Name: 'AMI-{{ resource_name }}-{{ params["BuildId"] }}'
+        ResourceName: '{{ resource_name }}'
+        BuildId: '{{ params["BuildId"] }}'
+        Purpose: 'ami-build'
      register: ami_instance
 
-   - name: 'Print instance data'
-     debug:
-       var: ami_instance
+   - name: 'Set build instance facts'
+     set_fact:
+       build_instance_id: '{{ ami_instance.instances.0.instance_id }}'
+       build_instance_ip: '{{ ami_instance.instances.0.network_interfaces.0.private_ip_address }}'
+
+   - debug:
+       msg: 'Build instance {{ build_instance_id }} at {{ build_instance_ip }}'
 
    - name: 'Add host to group'
      add_host:
-       name: '{{ ami_instance.instances.0.network_interfaces.0.private_ip_address }}'
+       name: '{{ build_instance_ip }}'
        groups: 'just_created'
        ansible_connection: 'ssh'
-       ansible_ssh_private_key_file: '{{ ami_dir }}/{{ build_tag }}.pem'
+       ansible_ssh_private_key_file: '{{ private_key_file }}'
+       ansible_ssh_common_args: '-o UserKnownHostsFile={{ known_hosts_file }}'
        ansible_user: 'ec2-user'
 
-   - name: 'Wait for SSH to be ready {{ ami_instance.instances.0.network_interfaces.0.private_ip_address }}'
+   - name: 'Wait for SSH to be ready on {{ build_instance_ip }}'
      wait_for:
-       host: '{{ ami_instance.instances.0.network_interfaces.0.private_ip_address }}'
+       host: '{{ build_instance_ip }}'
        port: 22
        search_regex: 'OpenSSH'
        timeout: 300
-   - set_fact: 
-       /usr/bin/python3
-       
+
    - name: 'Trust new host'
-     shell: 'ssh-keyscan -p 22  {{ ami_instance.instances.0.network_interfaces.0.private_ip_address }} > /home/build/.ssh/known_hosts'
+     shell: 'ssh-keyscan -p 22 {{ build_instance_ip }} > {{ known_hosts_file }}'
 
    - name: 'Copy certificates to target'
      shell: |
         set -euo pipefail
-        export remote_host={{ ami_instance.instances.0.network_interfaces.0.private_ip_address }}
-        export remote_user="ec2-user"
-        export remote_key={{ ami_dir }}/{{ build_tag }}.pem
+        remote="ec2-user@{{ build_instance_ip }}"
+        ssh_opts="-i {{ private_key_file }} -o UserKnownHostsFile={{ known_hosts_file }}"
 
-        ls -la /opt/cert
-        
-        echo "Copy certs"
-        scp -i ${remote_key} -r \
-             /opt/cert  \
-             ${remote_user}@${remote_host}:/tmp/cert
+        if [[ -z "$(find /opt/cert -maxdepth 1 -type f 2>/dev/null)" ]]; then
+          echo "No certificates in /opt/cert, skipping"
+          exit 0
+        fi
 
-        echo "Make certs dir"
-        ssh -i ${remote_key} \
-             ${remote_user}@${remote_host} \
-             sudo mkdir -p /opt/cert
+        scp ${ssh_opts} -r /opt/cert "${remote}:/tmp/cert"
+        ssh ${ssh_opts} "${remote}" '
+          set -e
+          sudo mkdir -p /opt/cert
+          sudo cp /tmp/cert/* /etc/pki/ca-trust/source/anchors/
+          sudo cp /tmp/cert/* /opt/cert/
+          sudo update-ca-trust extract
+        '
 
-        echo "Position certs trust"
-        ssh -i ${remote_key} \
-             ${remote_user}@${remote_host} \
-             sudo cp /tmp/cert/* /etc/pki/ca-trust/source/anchors/
-
-        echo "Position certs opt"
-        ssh -i ${remote_key} \
-             ${remote_user}@${remote_host} \
-             sudo cp /tmp/cert/* /opt/cert/
-
-        echo "Update ca-trust"
-        ssh -i ${remote_key} \
-             ${remote_user}@${remote_host} \
-             sudo update-ca-trust extract
-             
    - name: 'Execute installation roles'
      include_role:
        name: '{{ install_role }}'
@@ -274,7 +305,6 @@
          delegate_to: '{{ groups.just_created[0] }}'
          vars:
            ansible_python_interpreter: "/usr/bin/python3"
-
      with_items: '{{ installation_roles }}'
      loop_control:
        loop_var: install_role
@@ -282,8 +312,8 @@
 
    - name: 'Create AMI'
      ec2_ami:
-       instance_id: '{{ ami_instance.instances.0.instance_id }}'
-       region: '{{ ansible_ec2_placement_region }}'
+       instance_id: '{{ build_instance_id }}'
+       region: '{{ region }}'
        state: present
        description: 'This was provisioned for {{ build_tag }}'
        name: '{{ build_tag }}'
@@ -295,6 +325,10 @@
            volume_type: gp3
            delete_on_termination: true
            encrypted: true
+       tags:
+         Name: '{{ build_tag }}'
+         ResourceName: '{{ resource_name }}'
+         BuildId: '{{ params["BuildId"] }}'
      register: amioutput
 
    - name: 'Add AMI Id to artifacts'
@@ -304,30 +338,25 @@
        artifact_key: 'AmiId'
        artifact_value: '{{ amioutput.image_id }}'
 
-
    - name: 'Print AMI data'
      debug:
        var: amioutput
 
   always:
-    - name: 'Sleep before termination'
-      shell: |
-         sleep 30
-         
     - name: 'Terminate temporary instance'
       ec2_instance:
         state: absent
-        region: '{{ ansible_ec2_placement_region }}'
-        instance_ids: '{{ ami_instance.instances.0.instance_id }}'
-
+        region: '{{ region }}'
+        instance_ids: '{{ build_instance_id }}'
+      when: build_instance_id is defined
 
     - name: 'Remove temporary key pair'
       ec2_key:
         name: '{{ build_tag }}'
-        region: '{{ ansible_ec2_placement_region }}'
+        region: '{{ region }}'
         state: absent
 
-    - name: 'Delete private key file'
+    - name: 'Delete temporary build directory'
       file:
-        path: '~/.ami/{{ build_tag }}.pem'
+        path: '{{ build_dir.path }}'
         state: absent
