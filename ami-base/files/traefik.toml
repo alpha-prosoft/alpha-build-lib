@@ -1,19 +1,32 @@
-defaultEntryPoints = ["http"]
-
 [entryPoints]
-  [entryPoints.local-private]
-    address = "127.0.0.1:18999"
+  [entryPoints.web]
+    address = ":80"
+    [entryPoints.web.http.redirections.entryPoint]
+      to = "websecure"
+      scheme = "https"
+      permanent = true
+  [entryPoints.websecure]
+    address = ":443"
   [entryPoints.http]
     address = "0.0.0.0:8080"
-  [entryPoints.http.forwardedHeaders]
-    insecure = true
-
-
+    [entryPoints.http.forwardedHeaders]
+      insecure = true
+  [entryPoints.local-private]
+    address = "127.0.0.1:18999"
 
 [providers]
   [providers.file]
     directory = "/etc/traefik/config"
     watch = true
+
+# Automatic TLS via Let's Encrypt using a DNS-01 challenge through Route53.
+# The instance role must allow route53:GetChange, route53:ListHostedZonesByName
+# and route53:ChangeResourceRecordSets on the public hosted zone.
+[certificatesResolvers.le.acme]
+  email = "contact@alpha-prosoft.com"
+  storage = "/etc/traefik/acme.json"
+  [certificatesResolvers.le.acme.dnsChallenge]
+    provider = "route53"
 
 [log]
   filePath = "/var/log/traefik/traefik.log"
@@ -22,7 +35,3 @@ defaultEntryPoints = ["http"]
 
 [ping]
   entryPoint = "http"
-
-
-
-

@@ -69,6 +69,15 @@
     group: root
     mode: '0644'
 
+- name: 'Create ACME storage for traefik TLS certificates'
+  copy:
+    content: "{}\n"
+    dest: /etc/traefik/acme.json
+    owner: traefik
+    group: traefik
+    mode: '0600'
+    force: no
+
 - name: 'Enable traefik service'
   systemd:
     name: traefik 

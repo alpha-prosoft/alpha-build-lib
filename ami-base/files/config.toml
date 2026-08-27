@@ -1,18 +1,22 @@
-[http.middlewares]
-    [http.middlewares.local-auth.forwardAuth]
-       address = "http://127.0.0.1:8081"
-       authResponseHeaders = ["A-User", "A-Email", "A-Name", "A-Role", "A-Roles"]
-
-
+# TLS front door. __SERVICE_FQDN__ is replaced at deploy time (userdata) with
+# the instance's public FQDN, e.g. jenkins.pipeline.alpha-prosoft.com, so the
+# ACME (Let's Encrypt / Route53 DNS-01) resolver can issue a cert for it.
+# The forward-auth middleware was removed with the ALB; the backend service
+# (Jenkins/Gerrit) now handles its own authentication.
 [http]
-    [http.routers]
-       [http.routers.local]
-          rule = "PathPrefix(`/`)"
-          service = "local"
-          middlewares = ["local-auth"]
+  [http.routers]
+    [http.routers.websecure]
+      rule = "Host(`__SERVICE_FQDN__`)"
+      entryPoints = ["websecure"]
+      service = "local"
+      [http.routers.websecure.tls]
+        certResolver = "le"
+    [http.routers.local-http]
+      rule = "PathPrefix(`/`)"
+      entryPoints = ["http"]
+      service = "local"
 
-    [http.services]
-          [http.services.local.loadbalancer]
-            [[http.services.local.loadbalancer.servers]]
-              url = "http://localhost:8082"
-
+  [http.services]
+    [http.services.local.loadbalancer]
+      [[http.services.local.loadbalancer.servers]]
+        url = "http://localhost:8082"
